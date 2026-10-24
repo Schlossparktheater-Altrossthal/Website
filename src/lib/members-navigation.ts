@@ -4,14 +4,12 @@ import type {
   MembersNavSubgroup,
 } from "@/config/members-navigation";
 import {
-  MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
+  MEMBERS_NAV_FLAT_MAX_ITEMS,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
   defaultMembersNavIcon,
   membersNavigation,
   type MembersNavIcon,
 } from "@/config/members-navigation";
-
-export type AssignmentFocus = "none" | "rehearsals" | "departments" | "both";
 
 export interface ActiveProductionNavInfo {
   id: string;
@@ -43,11 +41,6 @@ export function selectMembersNavigation({
   activeProduction = null,
 }: MembersNavigationSelectorOptions = {}): MembersNavGroup[] {
   return groups.map((group) => {
-    if (group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID) {
-      const items = cloneGroupItems(group.items);
-      return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
-    }
-
     if (group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID) {
       const items = cloneGroupItems(group.items);
       if (activeProduction) {
@@ -86,21 +79,19 @@ export function selectMembersNavigation({
   });
 }
 
-export function resolveAssignmentsGroupLabel(
-  focus: AssignmentFocus,
-  permissions: readonly string[] | Set<string> | undefined,
-) {
-  if (focus === "both") return "Gewerke";
-  if (focus === "departments") return "Gewerke";
-  if (focus === "rehearsals") return "Proben";
-
-  const permissionSet = permissions instanceof Set ? permissions : new Set(permissions ?? []);
-  const canSeeRehearsals = permissionSet.has("PRIVATE.REHEARSAL.OWN.VIEW");
-  const canSeeDepartments = permissionSet.has("PRIVATE.DEPARTMENT.OWN.VIEW");
-
-  if (canSeeRehearsals && canSeeDepartments) return "Gewerke";
-  if (canSeeDepartments) return "Gewerke";
-  return "Proben";
+/**
+ * Wer nur wenige Seiten sieht (typisch: Ensemble), bekommt eine flache Liste ohne
+ * Gruppenüberschriften – einzelne Einträge unter eigener Überschrift wirken zerstückelt.
+ */
+export function flattenSmallMembersNavigation(
+  groups: readonly MembersNavGroup[],
+): MembersNavGroup[] {
+  const items = groups.flatMap((group) => [
+    ...group.items,
+    ...(group.subgroups?.flatMap((sub) => sub.items) ?? []),
+  ]);
+  if (groups.length <= 1 || items.length > MEMBERS_NAV_FLAT_MAX_ITEMS) return [...groups];
+  return [{ id: groups[0]!.id, label: "", items }];
 }
 
 export function filterMembersNavigationByPermissions(

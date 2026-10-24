@@ -5,7 +5,6 @@ import { execSync } from "node:child_process";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import type { AssignmentFocus } from "@/components/members-nav";
 import { MEMBERS_NAV_CLOSED_GROUPS_COOKIE, parseClosedNavGroups } from "@/lib/members-navigation";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
 import { MembersAppShell } from "@/components/members/members-app-shell";
@@ -156,17 +155,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
     redirect("/mitglieder");
   }
 
-  const [rehearsalAssignments, departmentAssignmentCount, leadAssignments] = assignmentCounts;
+  const [, departmentAssignmentCount, leadAssignments] = assignmentCounts;
   const isDepartmentLead = leadAssignments > 0;
-  let assignmentFocus: AssignmentFocus = "none";
-  if (rehearsalAssignments > 0 && departmentAssignmentCount > 0) {
-    assignmentFocus = "both";
-  } else if (departmentAssignmentCount > 0) {
-    assignmentFocus = "departments";
-  } else if (rehearsalAssignments > 0) {
-    assignmentFocus = "rehearsals";
-  }
-
   const hasDepartmentMemberships = departmentAssignmentCount > 0;
 
   const layoutStyle = {
@@ -196,7 +186,6 @@ export default async function MembersLayout({ children }: { children: React.Reac
               activeProduction={activeProduction ?? undefined}
               productions={switchableProductions}
               canManageProductions={permissions.includes("PRIVATE.PRODUCTION.SHOW.MANAGE")}
-              assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               isBoard={isBoard}
               isDepartmentLead={isDepartmentLead}

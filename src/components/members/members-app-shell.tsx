@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
+import { MembersNav } from "@/components/members-nav";
 import { MembersBottomNav } from "@/components/members/members-bottom-nav";
 import { cn } from "@/lib/utils";
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
@@ -181,7 +181,6 @@ interface MembersAppShellProps {
   activeProduction?: { id: string; title: string | null; year: number };
   productions?: SwitcherProduction[];
   canManageProductions?: boolean;
-  assignmentFocus: AssignmentFocus;
   hasDepartmentMemberships: boolean;
   isBoard: boolean;
   isDepartmentLead: boolean;
@@ -348,7 +347,6 @@ export function MembersAppShell({
   activeProduction,
   productions,
   canManageProductions,
-  assignmentFocus,
   hasDepartmentMemberships,
   isBoard,
   isDepartmentLead,
@@ -440,7 +438,6 @@ export function MembersAppShell({
               activeProduction={activeProduction}
               productions={productions}
               canManageProductions={canManageProductions}
-              assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               isBoard={isBoard}
               isDepartmentLead={isDepartmentLead}
@@ -497,7 +494,6 @@ export function MembersAppShell({
             <MembersBottomNav
               permissions={permissions}
               activeProduction={activeProduction}
-              assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               isBoard={isBoard}
               isDepartmentLead={isDepartmentLead}

@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Text } from "@/components/ui/typography";
 import {
-  MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   defaultMembersNavIcon,
   membersNavigation,
   type MembersNavGroup,
@@ -38,14 +37,11 @@ import {
   MEMBERS_NAV_DEFAULT_CLOSED_GROUPS,
   filterMembersNavigationByPermissions,
   filterMembersNavigationByQuery,
-  resolveAssignmentsGroupLabel,
+  flattenSmallMembersNavigation,
   selectMembersNavigation,
   type ActiveProductionNavInfo,
-  type AssignmentFocus,
 } from "@/lib/members-navigation";
 import { cn } from "@/lib/utils";
-
-export type { AssignmentFocus } from "@/lib/members-navigation";
 
 export function isMembersNavItemActive(pathname: string, href: string) {
   if (pathname === href) return true;
@@ -108,7 +104,6 @@ function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem
 export interface MembersNavData {
   permissions?: readonly string[];
   activeProduction?: ActiveProductionNavInfo;
-  assignmentFocus?: AssignmentFocus;
   hasDepartmentMemberships?: boolean;
   isBoard?: boolean;
   isDepartmentLead?: boolean;
@@ -123,27 +118,23 @@ export interface MembersNavData {
 export function useMembersNavGroups({
   permissions,
   activeProduction,
-  assignmentFocus = "none",
   hasDepartmentMemberships = false,
   isBoard = false,
   isDepartmentLead = false,
   pageVisibility,
 }: MembersNavData): MembersNavGroup[] {
   return useMemo(() => {
-    const assignmentLabel = resolveAssignmentsGroupLabel(assignmentFocus, permissions ?? []);
-    const labelledGroups = selectMembersNavigation({
+    const selectedGroups = selectMembersNavigation({
       groups: membersNavigation,
       hasDepartmentMemberships,
       activeProduction: activeProduction ?? null,
-    }).map((group) =>
-      group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID ? { ...group, label: assignmentLabel } : group,
-    );
-    const { groups } = filterMembersNavigationByPermissions(labelledGroups, permissions, {
+    });
+    const { groups } = filterMembersNavigationByPermissions(selectedGroups, permissions, {
       isBoard,
       isDepartmentLead,
     });
     const visibilityMap = pageVisibility ?? {};
-    return groups
+    const visibleGroups = groups
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => visibilityMap[item.href] ?? true),
@@ -155,9 +146,9 @@ export function useMembersNavGroups({
           .filter((subgroup) => subgroup.items.length > 0),
       }))
       .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
+    return flattenSmallMembersNavigation(visibleGroups);
   }, [
     activeProduction,
-    assignmentFocus,
     hasDepartmentMemberships,
     isBoard,
     isDepartmentLead,
@@ -290,25 +281,28 @@ export function MembersNav({
         ) : (
           visibleGroups.map((group, index) => {
             // Eingeklappte Leiste und Suche zeigen immer alle Einträge.
-            const isOpen = isCollapsed || isFiltering || !closedGroups.has(group.id);
+            const hasLabel = group.label.length > 0;
+            const isOpen = isCollapsed || isFiltering || !hasLabel || !closedGroups.has(group.id);
             const contentId = `${searchInputId}-group-${group.id}`;
             return (
               <SidebarGroup key={group.id} className={cn(isCollapsed && "py-1")}>
                 {isCollapsed && index > 0 ? <SidebarSeparator className="mx-0 mb-2" /> : null}
-                <SidebarGroupLabel asChild className="group-data-[collapsible=icon]:hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.id)}
-                    aria-expanded={isOpen}
-                    aria-controls={contentId}
-                    className="w-full cursor-pointer justify-between hover:text-sidebar-foreground"
-                  >
-                    {group.label}
-                    <ChevronDownIcon
-                      className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")}
-                    />
-                  </button>
-                </SidebarGroupLabel>
+                {hasLabel ? (
+                  <SidebarGroupLabel asChild className="group-data-[collapsible=icon]:hidden">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={contentId}
+                      className="w-full cursor-pointer justify-between hover:text-sidebar-foreground"
+                    >
+                      {group.label}
+                      <ChevronDownIcon
+                        className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")}
+                      />
+                    </button>
+                  </SidebarGroupLabel>
+                ) : null}
                 {isOpen ? (
                   <SidebarGroupContent id={contentId}>
                     <SidebarMenu>

@@ -152,6 +152,9 @@ import {
   Warehouse,
   QrCode,
   Ticket,
+  Gift,
+  ScrollText,
+  GraduationCap,
   Boxes,
   Keyboard,
   ChefHat,
@@ -1189,4 +1192,22 @@ export function EraserIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <Eraser className={className} aria-hidden {...props} />;
+}
+
+export function GiftIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
+  return <Gift className={className} aria-hidden {...props} />;
+}
+
+export function ScrollTextIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ScrollText className={className} aria-hidden {...props} />;
+}
+
+export function GraduationCapIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <GraduationCap className={className} aria-hidden {...props} />;
 }

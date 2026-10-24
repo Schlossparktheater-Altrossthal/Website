@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
-  MEMBERS_NAV_PRODUCTION_GROUP_ID,
-} from "@/config/members-navigation";
+import { MEMBERS_NAV_PRODUCTION_GROUP_ID } from "@/config/members-navigation";
 import {
   filterMembersNavigationByPermissions,
-  resolveAssignmentsGroupLabel,
+  flattenSmallMembersNavigation,
   selectMembersNavigation,
   type ActiveProductionNavInfo,
 } from "@/lib/members-navigation";
@@ -32,17 +29,14 @@ describe("selectMembersNavigation", () => {
 });
 
 describe("filterMembersNavigationByPermissions", () => {
-  it("keeps only department related assignments for department-focused members", () => {
-    const groups = selectMembersNavigation();
-    const permissions = ["PRIVATE.DEPARTMENT.OWN.VIEW"] as const;
-    const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions, {
-      isDepartmentLead: true,
-    });
-    const assignments = filtered.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
-
-    expect(assignments).toBeDefined();
-    const hrefs = assignments!.items.map((item) => item.href);
-    expect(hrefs).toEqual(["/mitglieder/produktionen/zuweisung", "/mitglieder/meine-gewerke"]);
+  it("shows the assignment page to department leads", () => {
+    const { groups: filtered } = filterMembersNavigationByPermissions(
+      selectMembersNavigation(),
+      ["PRIVATE.DEPARTMENT.OWN.VIEW"],
+      { isDepartmentLead: true },
+    );
+    const hrefs = filtered.flatMap((group) => group.items.map((item) => item.href));
+    expect(hrefs).toEqual(["/mitglieder/meine-gewerke", "/mitglieder/produktionen/zuweisung"]);
   });
 
   it("hides the assignment page from members who do not lead a department", () => {
@@ -56,20 +50,24 @@ describe("filterMembersNavigationByPermissions", () => {
   });
 });
 
-describe("resolveAssignmentsGroupLabel", () => {
-  it("returns 'Gewerke' when focus is departments", () => {
-    expect(resolveAssignmentsGroupLabel("departments", [])).toBe("Gewerke");
+describe("flattenSmallMembersNavigation", () => {
+  const ensemble = [
+    "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
+    "PRIVATE.REHEARSAL.OWN.VIEW",
+    "PRIVATE.PROFILE.OWN.VIEW",
+    "PRIVATE.DEPARTMENT.OWN.VIEW",
+  ];
+
+  it("merges a short menu into one list without headings", () => {
+    const { groups } = filterMembersNavigationByPermissions(selectMembersNavigation(), ensemble);
+    const flat = flattenSmallMembersNavigation(groups);
+    expect(flat).toHaveLength(1);
+    expect(flat[0]!.label).toBe("");
+    expect(flat[0]!.items.map((item) => item.label)).toContain("Profil");
   });
 
-  it("infers label from permissions when focus is none", () => {
-    expect(
-      resolveAssignmentsGroupLabel("none", [
-        "PRIVATE.DEPARTMENT.OWN.VIEW",
-        "PRIVATE.REHEARSAL.OWN.VIEW",
-      ]),
-    ).toBe("Gewerke");
-    expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.DEPARTMENT.OWN.VIEW"])).toBe("Gewerke");
-    expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.REHEARSAL.OWN.VIEW"])).toBe("Proben");
-    expect(resolveAssignmentsGroupLabel("none", [])).toBe("Proben");
+  it("keeps the groups for long menus", () => {
+    const { groups } = filterMembersNavigationByPermissions(selectMembersNavigation(), undefined);
+    expect(flattenSmallMembersNavigation(groups)).toEqual(groups);
   });
 });

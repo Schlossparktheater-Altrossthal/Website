@@ -14,6 +14,8 @@ import {
   ClapperboardIcon,
   DramaIcon,
   FileStackIcon,
+  GiftIcon,
+  GraduationCapIcon,
   LayersIcon,
   LayoutGridIcon,
   ListChecksIcon,
@@ -22,6 +24,7 @@ import {
   PiggyBankIcon,
   ReceiptIcon,
   RulerIcon,
+  ScrollTextIcon,
   ShieldCheckIcon,
   SparklesIcon,
   TicketIcon,
@@ -36,9 +39,10 @@ export type MembersNavIconProps = { className?: string };
 export type MembersNavIcon = ComponentType<MembersNavIconProps>;
 
 export type MembersNavGroupId =
-  "general" | "assignments" | "production" | "food" | "admin" | "pages";
+  "general" | "personal" | "production" | "workshop" | "admin" | "pages";
 
-export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
+/** Bis zu so vielen Einträgen zeigt das Menü eine flache Liste ohne Gruppenüberschriften. */
+export const MEMBERS_NAV_FLAT_MAX_ITEMS = 8;
 export const MEMBERS_NAV_PRODUCTION_GROUP_ID: MembersNavGroupId = "production";
 
 export interface MembersNavItem {
@@ -64,6 +68,7 @@ export interface MembersNavSubgroup {
 
 export interface MembersNavGroup {
   id: MembersNavGroupId;
+  /** Leer = Einträge ohne Überschrift ganz oben (immer offen). */
   label: string;
   items: readonly MembersNavItem[];
   subgroups?: readonly MembersNavSubgroup[];
@@ -76,25 +81,13 @@ export interface MembersNavGroup {
 export const membersNavigation = [
   {
     id: "general",
-    label: "Allgemeines",
+    label: "",
     items: [
       {
         href: "/mitglieder",
-        label: "Dashboard",
+        label: "Start",
         permissionKey: "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
         icon: LayoutGridIcon,
-      },
-      {
-        href: "/mitglieder/profil",
-        label: "Profil",
-        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
-        icon: UserRoundIcon,
-      },
-      {
-        href: "/mitglieder/sperrliste",
-        label: "Sperrliste",
-        permissionKey: "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
-        icon: CalendarXIcon,
       },
       {
         href: "/mitglieder/meine-proben",
@@ -103,10 +96,40 @@ export const membersNavigation = [
         icon: CalendarCheckIcon,
       },
       {
-        href: "/mitglieder/freikarten",
-        label: "Freikarten",
+        href: "/mitglieder/sperrliste",
+        label: "Sperrliste",
+        permissionKey: "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
+        icon: CalendarXIcon,
+      },
+      {
+        href: "/mitglieder/text",
+        label: "Mein Text",
+        permissionKey: "PRIVATE.PRODUCTION.SCRIPT.READ",
+        icon: ScrollTextIcon,
+      },
+      {
+        href: "/mitglieder/text/lernen",
+        label: "Text lernen",
+        permissionKey: "PRIVATE.PRODUCTION.SCRIPT.READ",
+        icon: GraduationCapIcon,
+      },
+      {
+        href: "/mitglieder/meine-gewerke",
+        label: "Meine Teams",
+        permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
+        icon: UsersRoundIcon,
+      },
+    ],
+  },
+  {
+    id: "personal",
+    label: "Mein Bereich",
+    items: [
+      {
+        href: "/mitglieder/profil",
+        label: "Profil",
         permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
-        icon: TicketIcon,
+        icon: UserRoundIcon,
       },
       {
         href: "/mitglieder/finanzen/auslagen",
@@ -114,23 +137,36 @@ export const membersNavigation = [
         permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
         icon: ReceiptIcon,
       },
+      {
+        href: "/mitglieder/freikarten",
+        label: "Freikarten",
+        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
+        icon: GiftIcon,
+      },
+      {
+        href: "/mitglieder/rezepte",
+        label: "Rezepte",
+        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
+        icon: ChefHatIcon,
+      },
     ],
   },
   {
     id: "production",
-    label: "Proben",
+    label: "Produktion",
     items: [
       {
         href: "/mitglieder/produktionen",
-        label: "Überblick",
+        label: "Übersicht",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
         icon: ClapperboardIcon,
       },
       {
-        href: "/mitglieder/regie",
-        label: "Regie",
-        permissionKey: "PRIVATE.PRODUCTION.DIRECTION.DASHBOARD",
-        icon: DramaIcon,
+        href: "/mitglieder/produktionen/stueck",
+        label: "Stück & Skript",
+        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        alsoPermissionKeys: ["PRIVATE.PRODUCTION.REQUIREMENT.CREATE"],
+        icon: BookOpenTextIcon,
       },
       {
         href: "/mitglieder/terminplanung",
@@ -139,49 +175,42 @@ export const membersNavigation = [
         icon: CalendarCogIcon,
       },
       {
+        href: "/mitglieder/regie",
+        label: "Regie",
+        permissionKey: "PRIVATE.PRODUCTION.DIRECTION.DASHBOARD",
+        icon: DramaIcon,
+      },
+      {
+        href: "/mitglieder/produktionen/zuweisung",
+        label: "Besetzung & Teams",
+        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        showForDepartmentLead: true,
+        icon: ClipboardListIcon,
+      },
+      {
+        href: "/mitglieder/produktionen/rueckmeldungen-auswertung",
+        label: "Rückmeldungen",
+        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        icon: ListChecksIcon,
+      },
+      {
         href: "/mitglieder/karten",
         label: "Kartenverkauf",
         permissionKey: "PRIVATE.TICKETS.OFFICE",
         alsoPermissionKeys: ["PRIVATE.TICKETS.MANAGE", "PRIVATE.TICKETS.CHECKIN"],
         icon: TicketIcon,
       },
-      {
-        href: "/mitglieder/produktionen/stueck",
-        label: "Stück",
-        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
-        alsoPermissionKeys: ["PRIVATE.PRODUCTION.REQUIREMENT.CREATE"],
-        icon: BookOpenTextIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/rueckmeldungen-auswertung",
-        label: "Rückmeldungen & Auswertung",
-        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
-        icon: ListChecksIcon,
-      },
     ],
   },
   {
-    id: "assignments",
-    label: "Gewerke",
+    id: "workshop",
+    label: "Werkstatt",
     items: [
       {
-        href: "/mitglieder/produktionen/zuweisung",
-        label: "Teams & Zuweisung",
-        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
-        showForDepartmentLead: true,
-        icon: ClipboardListIcon,
-      },
-      {
-        href: "/mitglieder/meine-gewerke",
-        label: "Meine Teams",
-        permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
-        icon: UsersRoundIcon,
-      },
-      {
-        href: "/mitglieder/blaupausen",
-        label: "Blaupausen",
-        permissionKey: "PRIVATE.DEPARTMENT.TEMPLATE.MANAGE",
-        icon: FileStackIcon,
+        href: "/mitglieder/lager",
+        label: "Lager",
+        permissionKey: "PRIVATE.INVENTORY.USE",
+        icon: WarehouseIcon,
       },
       {
         href: "/mitglieder/koerpermasse",
@@ -190,22 +219,10 @@ export const membersNavigation = [
         icon: RulerIcon,
       },
       {
-        href: "/mitglieder/lager",
-        label: "Lager",
-        permissionKey: "PRIVATE.INVENTORY.USE",
-        icon: WarehouseIcon,
-      },
-    ],
-  },
-  {
-    id: "food",
-    label: "Verpflegung",
-    items: [
-      {
-        href: "/mitglieder/rezepte",
-        label: "Rezepte",
-        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
-        icon: ChefHatIcon,
+        href: "/mitglieder/blaupausen",
+        label: "Blaupausen",
+        permissionKey: "PRIVATE.DEPARTMENT.TEMPLATE.MANAGE",
+        icon: FileStackIcon,
       },
       {
         href: "/mitglieder/verpflegung/zuordnung",
@@ -216,34 +233,9 @@ export const membersNavigation = [
     ],
   },
   {
-    id: "pages",
-    label: "Pages",
-    items: [
-      {
-        href: "/mitglieder/website",
-        label: "Website & Theme",
-        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
-        icon: PaletteIcon,
-      },
-      {
-        href: "/mitglieder/pages/seitensteuerung",
-        label: "Seitensteuerung",
-        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
-        icon: LayersIcon,
-      },
-    ],
-  },
-  {
     id: "admin",
     label: "Verwaltung",
     items: [
-      {
-        href: "/mitglieder/finanzen",
-        label: "Finanzen",
-        permissionKey: "PRIVATE.FINANCE.VIEW",
-        alsoPermissionKeys: ["PRIVATE.FINANCE.MANAGE"],
-        icon: PiggyBankIcon,
-      },
       {
         href: "/mitglieder/mitgliederverwaltung",
         label: "Mitglieder",
@@ -263,10 +255,29 @@ export const membersNavigation = [
         icon: CameraIcon,
       },
       {
-        href: "/mitglieder/datenportal",
-        label: "Datenportal",
-        permissionKey: "PRIVATE.DATA.PORTAL.VIEW",
-        icon: BarChart3Icon,
+        href: "/mitglieder/finanzen",
+        label: "Finanzen",
+        permissionKey: "PRIVATE.FINANCE.VIEW",
+        alsoPermissionKeys: ["PRIVATE.FINANCE.MANAGE"],
+        icon: PiggyBankIcon,
+      },
+    ],
+  },
+  {
+    id: "pages",
+    label: "Website & System",
+    items: [
+      {
+        href: "/mitglieder/website",
+        label: "Website & Theme",
+        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
+        icon: PaletteIcon,
+      },
+      {
+        href: "/mitglieder/pages/seitensteuerung",
+        label: "Seitensteuerung",
+        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
+        icon: LayersIcon,
       },
       {
         href: "/mitglieder/server-einstellungen",
@@ -285,6 +296,12 @@ export const membersNavigation = [
         label: "Onboarding-Statistik",
         permissionKey: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
         icon: SparklesIcon,
+      },
+      {
+        href: "/mitglieder/datenportal",
+        label: "Datenportal",
+        permissionKey: "PRIVATE.DATA.PORTAL.VIEW",
+        icon: BarChart3Icon,
       },
     ],
   },
