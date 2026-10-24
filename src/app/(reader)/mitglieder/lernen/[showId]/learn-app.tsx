@@ -87,8 +87,8 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     [settings.roleIds, reader.roles],
   );
   const { items, units, byId } = React.useMemo(
-    () => buildUnits(reader, tokenized, roleIds),
-    [reader, tokenized, roleIds],
+    () => buildUnits(reader, tokenized, roleIds, settings.groups ?? true),
+    [reader, tokenized, roleIds, settings.groups],
   );
   const rehearsals = React.useMemo(
     () => new Map(data.rehearsals.map((entry) => [entry.sceneId, entry.start])),
@@ -998,6 +998,18 @@ function LearnSettingsSheet({
             </span>
           </span>
           <Switch checked={settings.typing} onCheckedChange={(typing) => onChange({ typing })} />
+        </label>
+        <label className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-sm font-medium">Gruppenpassagen mitlernen</span>
+            <span className="block text-xs text-muted-foreground">
+              Repliken wie „Alle“ oder „Chor“, bei denen du mitsprichst
+            </span>
+          </span>
+          <Switch
+            checked={settings.groups ?? true}
+            onCheckedChange={(groups) => onChange({ groups })}
+          />
         </label>
         <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">
           <p className="font-medium">

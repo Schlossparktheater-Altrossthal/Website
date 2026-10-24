@@ -5,7 +5,7 @@ import {
   type PdfTableRow,
 } from "@/lib/pdf/layout";
 
-import { buildCastingModel, isEnsembleRole, ROLE_TIER_LABELS, type RoleTier } from "./casting";
+import { buildCastingModel, isEnsembleStat, ROLE_TIER_LABELS, type RoleTier } from "./casting";
 import type { ScriptReaderData } from "./reader";
 import {
   CUE_CATEGORIES,
@@ -110,9 +110,9 @@ function renderRoleStats(doc: Doc, stats: ScriptStats, mine: Set<string>) {
     ],
   });
   // Sammelrollen („Alle“, „Chor“ …) getrennt unter den echten Rollen.
-  const ensemble = stats.roles.filter((role) => isEnsembleRole(role.name));
+  const ensemble = stats.roles.filter((role) => isEnsembleStat(role));
   const rows: PdfTableRow[] = [
-    ...stats.roles.filter((role) => !isEnsembleRole(role.name)).map(row),
+    ...stats.roles.filter((role) => !isEnsembleStat(role)).map(row),
     ...(ensemble.length
       ? [{ kind: "group" as const, label: ROLE_TIER_LABELS.ensemble }, ...ensemble.map(row)]
       : []),

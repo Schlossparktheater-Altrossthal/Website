@@ -1,15 +1,22 @@
+import { blockHasRole } from "./role-links";
 import type { CueCategory, ScriptPart } from "./types";
 import { isSpoken, type ScriptBlockKind } from "./types";
 
 /** Reine Logik des Lesers (ohne DOM), damit sie testbar bleibt. */
 
-export type LogicBlock = { kind: ScriptBlockKind; roleIds: string[]; parts: ScriptPart[] };
+export type LogicBlock = {
+  kind: ScriptBlockKind;
+  roleIds: string[];
+  /** Mitglieder einer Gruppenrolle in diesem Absatz („Alle“). */
+  memberRoleIds?: string[];
+  parts: ScriptPart[];
+};
 
 /** Anzahl Wörter am Ende der Vorgänger-Replik, die als Stichwort betont werden. */
 export const CUE_LINE_WORDS = 6;
 
 export function isRoleBlock(block: LogicBlock, roleIds: ReadonlySet<string>) {
-  return isSpoken(block.kind) && block.roleIds.some((id) => roleIds.has(id));
+  return isSpoken(block.kind) && blockHasRole(block, roleIds);
 }
 
 export function cueParts(block: LogicBlock, categories: ReadonlySet<CueCategory>) {

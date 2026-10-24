@@ -5,7 +5,10 @@ import { loadScriptReview } from "@/lib/skript/review";
 import { readImportReport } from "@/lib/skript/json";
 import { listPendingImports, listScriptVersions } from "@/lib/skript/service";
 
+import { loadScriptRoleAdmin } from "@/lib/skript/role-admin";
+
 import { ScriptReview } from "./skript-review";
+import { ScriptRoles } from "./skript-roles";
 import { ScriptVersions, type ScriptPendingItem, type ScriptVersionItem } from "./skript-versions";
 
 export const SKRIPT_PATH = "/mitglieder/produktionen/stueck?ansicht=skript";
@@ -14,12 +17,15 @@ export const SKRIPT_PATH = "/mitglieder/produktionen/stueck?ansicht=skript";
 export async function SkriptView({
   showId,
   versionId,
+  section = null,
   canManage,
 }: {
   showId: string;
   versionId: string | null;
+  section?: "roles" | null;
   canManage: boolean;
 }) {
+  if (section === "roles") return <ScriptRoles data={await loadScriptRoleAdmin(showId)} />;
   if (versionId) {
     const review = await loadScriptReview(versionId);
     if (

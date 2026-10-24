@@ -92,7 +92,7 @@ export async function startEditing(versionId: string, userId: string) {
     prisma.scriptScene.findMany({
       where: { versionId },
       orderBy: { sequence: "asc" },
-      select: { id: true, sequence: true, title: true, measuredSeconds: true },
+      select: { id: true, sequence: true, title: true, sceneKey: true, measuredSeconds: true },
     }),
     prisma.scriptBlock.findMany({
       where: { versionId },
@@ -141,6 +141,7 @@ export async function startEditing(versionId: string, userId: string) {
         versionId: id,
         sequence: scene.sequence,
         title: scene.title,
+        sceneKey: scene.sceneKey,
         measuredSeconds: scene.measuredSeconds,
       })),
     }),

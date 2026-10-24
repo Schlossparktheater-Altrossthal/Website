@@ -1,5 +1,6 @@
 import type { ReaderBlock, ReaderRole, ReaderScene } from "./reader";
 import { splitTail } from "./reader-logic";
+import { blockHasRole, type RoleKind } from "./role-links";
 import type { CueCategory, ScriptPart } from "./types";
 import { isSpoken } from "./types";
 
@@ -22,11 +23,12 @@ export const CUE_CATEGORIES: CueCategory[] = [
 
 export type StatsInput = {
   scenes: (Pick<ReaderScene, "id" | "title"> & { measuredSeconds?: number | null })[];
-  blocks: Pick<
+  blocks: (Pick<
     ReaderBlock,
     "id" | "sceneId" | "kind" | "speaker" | "roleIds" | "parts" | "words" | "page"
-  >[];
-  roles: Pick<ReaderRole, "id" | "name">[];
+  > &
+    Partial<Pick<ReaderBlock, "memberRoleIds">>)[];
+  roles: (Pick<ReaderRole, "id" | "name"> & Partial<Pick<ReaderRole, "kind">>)[];
   /** Gemessene Szenendauer in Sekunden (z. B. aus Durchläufen); hat Vorrang vor der Schätzung. */
   measuredSeconds?: ReadonlyMap<string, number>;
 };
@@ -42,6 +44,8 @@ export type RoleStat = {
   share: number;
   longestPassage: number;
   sceneIds: string[];
+  /** Gepflegte Art der Skript-Rolle (Person/Gruppe/ignorieren), falls bekannt. */
+  kind?: RoleKind;
 };
 
 export type CueEntry = {
@@ -119,6 +123,7 @@ function escapeRe(value: string) {
 
 export function computeScriptStats(input: StatsInput): ScriptStats {
   const roleName = new Map(input.roles.map((role) => [role.id, role.name]));
+  const roleKind = new Map(input.roles.map((role) => [role.id, role.kind]));
   const roleStats = new Map<string, RoleStat>();
   const sceneStats = new Map<string, SceneStat>();
   for (const scene of input.scenes) {
@@ -242,6 +247,7 @@ export function computeScriptStats(input: StatsInput): ScriptStats {
   const roles = [...roleStats.values()]
     .map((stat) => ({
       ...stat,
+      kind: roleKind.get(stat.id),
       share: totalWords ? stat.words / totalWords : 0,
       sceneIds: [...stat.sceneIds].sort(
         (a, b) => (sceneOrder.get(a) ?? 0) - (sceneOrder.get(b) ?? 0),
@@ -287,7 +293,7 @@ export function cueScript(input: StatsInput, roleIds: readonly string[], cueWord
   for (const block of input.blocks) {
     if (!isSpoken(block.kind)) continue;
     const text = textOf(block.parts, ["text"]);
-    const mine = block.roleIds.some((id) => own.has(id));
+    const mine = blockHasRole(block, own);
     if (mine) {
       lines.push({
         blockId: block.id,

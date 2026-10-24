@@ -33,7 +33,7 @@ import { cueListCsv, matrixCsv, roleStatsCsv, sceneTableCsv } from "@/lib/skript
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
-import { buildCastingModel, isEnsembleRole, ROLE_TIER_LABELS } from "@/lib/skript/casting";
+import { buildCastingModel, isEnsembleStat, ROLE_TIER_LABELS } from "@/lib/skript/casting";
 import { toCsv } from "@/lib/skript/stats-csv";
 
 import { DoubleCasting, SceneMirror, useMinGap } from "./casting-views";
@@ -263,11 +263,11 @@ function RoleTable({ stats, mine }: { stats: ScriptStats; mine: Set<string> }) {
     // Sammelrollen („Alle“, „Chor“ …) getrennt unter den echten Rollen.
     return [...stats.roles].sort(
       (a, b) =>
-        Number(isEnsembleRole(a.name)) - Number(isEnsembleRole(b.name)) ||
+        Number(isEnsembleStat(a)) - Number(isEnsembleStat(b)) ||
         (sort === "name" ? a.name.localeCompare(b.name, "de") : value(b) - value(a)),
     );
   }, [stats.roles, sort]);
-  const firstEnsemble = rows.findIndex((role) => isEnsembleRole(role.name));
+  const firstEnsemble = rows.findIndex((role) => isEnsembleStat(role));
   const max = Math.max(1, ...stats.roles.map((role) => role.words));
   const header = (key: RoleSort, label: string, right = true) => (
     <th className={cn(th, right && "text-right")} aria-sort={sort === key ? "descending" : "none"}>

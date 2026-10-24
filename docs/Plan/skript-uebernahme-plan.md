@@ -1,6 +1,6 @@
 # Plan: Skript ↔ Stück – Rollen und Szenen übernehmen, zuordnen, zusammenführen
 
-Stand: 2026-10-24. Konkretisiert Phase 11 aus `skript-plan.md` („Übernahme-Assistent“) und den
+Stand: 2026-10-24 – Phase 1–4 umgesetzt (siehe Checkliste). Konkretisiert Phase 11 aus `skript-plan.md` („Übernahme-Assistent“) und den
 offenen Punkt „Sammelrollen einer Gruppe zuordnen“ aus `szenenspiegel-plan.md`.
 
 ## Ziel
@@ -227,3 +227,26 @@ kein eigener Mechanismus im Skript (E-U5).
   erscheint bei der Regie als Hinweis zum Übernehmen.
 - E-U5: Doppelbesetzung bleibt in der Besetzung (Person ↔ mehrere Rollen); der Plan kümmert sich
   um Zusammenlegungen/Aufteilungen durch den Autor.
+
+## Checkliste
+
+- [x] Phase 1 Rollen-Links (`ScriptRoleLink`, `ScriptRole.linkedAt`; ohne Link gilt weiter die
+      Namensgleichheit, `src/lib/skript/role-links.ts`, Leser/Lernmodus/Vergleich/PDF)
+- [x] Phase 2 Reiter „Rollen“ (`?ansicht=skript&bereich=rollen`, `skript-roles.tsx`,
+      `src/lib/skript/role-admin.ts`): Umbenennen (alter Name wird Schreibweise), Art,
+      Verknüpfen, Zusammenführen mit Protokoll `ScriptRoleMerge` und Rückgängig (Rolle kommt mit
+      gleicher ID zurück; Lernkarten, die es für die Zielrolle schon gab, bleiben verloren)
+- [x] Phase 3 Gruppen (`kind`, `groupMode` cast/present/fixed, `ScriptGroupRule` je Grundliste/
+      Szene/Absatz; `ReaderBlock.memberRoleIds`; Lernmodus-Schalter „Gruppenpassagen mitlernen“;
+      Spiegel nutzt die gepflegte Art). Besetzte ohne eigene Sprechrolle bekommen „Alle“ (cast)
+      direkt; Ausnahmen wirken für sie nicht.
+- [x] Phase 4 Stabile Szenen (`ScriptScene.sceneKey`, Rückfüllung über Titel, Freigabe vererbt
+      über Absatz-Mehrheit, `src/lib/skript/scene-keys.ts`). `measuredSeconds` läuft noch über
+      den Titel.
+- [ ] Phase 5 Trennen + Erkennung „Autor ändert Rollen“
+- [ ] Phase 6 Stück: Rollen zusammenführen
+- [ ] Phase 7 Übernahme-Assistent
+- [ ] Phase 8 „Änderungen fürs Stück“ + E2E
+
+DB-Test für Zusammenführen/Rückgängig/Gruppen: `src/lib/skript/__tests__/role-admin.db.manual.ts`
+(nicht in CI; Wegwerf-DB, `npx tsx`).

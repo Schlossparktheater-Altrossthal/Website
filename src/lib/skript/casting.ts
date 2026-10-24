@@ -26,6 +26,11 @@ export function isEnsembleRole(name: string) {
   return ENSEMBLE.test(name.trim());
 }
 
+/** Gruppe oder ignoriert: gepflegte Art vor Namensregel (docs/Plan/skript-uebernahme-plan.md). */
+export function isEnsembleStat(role: { name: string; kind?: "person" | "group" | "ignore" }) {
+  return role.kind ? role.kind !== "person" : isEnsembleRole(role.name);
+}
+
 /** Gliederung („1. TEIL“, „2. AKT“) und leere Szenen tragen keine Auftritte. */
 export function isPartHeading(title: string) {
   return /^\s*(?:\d+\.?\s*(?:teil|akt)|(?:teil|akt)\s+\d+)\b/iu.test(title);
@@ -83,7 +88,7 @@ export function buildCastingModel(stats: ScriptStats): CastingModel {
     .map((role) => {
       const map = presence.get(role.id) ?? new Map<number, Presence>();
       const count = map.size;
-      const tier: RoleTier = isEnsembleRole(role.name)
+      const tier: RoleTier = isEnsembleStat(role)
         ? "ensemble"
         : role.share >= 0.08 || count >= Math.max(4, scenes.length * 0.4)
           ? "main"

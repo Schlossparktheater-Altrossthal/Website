@@ -18,8 +18,8 @@ const data: ScriptReaderData = {
   },
   scenes: [{ id: "sc1", title: "Szene 1 – Wald", words: 9, minutes: 1, measuredSeconds: null }],
   roles: [
-    { id: "a", name: "Atreju", lines: 1, words: 3, sceneIds: ["sc1"] },
-    { id: "b", name: "Bastian", lines: 1, words: 6, sceneIds: ["sc1"] },
+    { id: "a", name: "Atreju", kind: "person", lines: 1, words: 3, sceneIds: ["sc1"] },
+    { id: "b", name: "Bastian", kind: "person", lines: 1, words: 6, sceneIds: ["sc1"] },
   ],
   ownRoleIds: [],
   credits: [
@@ -36,6 +36,7 @@ const data: ScriptReaderData = {
       kind: "direction",
       speaker: null,
       roleIds: [],
+      memberRoleIds: [],
       parts: [
         { kind: "cue", category: "licht", text: "LICHT 1 Wald" },
         { kind: "direction", text: "Nebel zieht auf." },
@@ -50,6 +51,7 @@ const data: ScriptReaderData = {
       kind: "speech",
       speaker: "Bastian",
       roleIds: ["b"],
+      memberRoleIds: [],
       parts: [{ kind: "text", text: "Wo bin ich hier nur gelandet?" }],
       words: 6,
       page: 1,
@@ -61,6 +63,7 @@ const data: ScriptReaderData = {
       kind: "speech",
       speaker: "Atreju",
       roleIds: ["a"],
+      memberRoleIds: [],
       parts: [
         { kind: "text", text: "In Phantásien." },
         { kind: "cue", category: "ton", text: "TON 2 Donner" },
@@ -87,6 +90,7 @@ describe("Skript-PDF", () => {
   it("rendert Auswertungen als eigene Abschnitte mit Inhaltsverzeichnis", async () => {
     const { text } = await render({
       roleIds: ["a"],
+      memberRoleIds: [],
       sections: ["roleStats", "sceneTable", "matrix", "mirror", "cueList", "cueScript", "script"],
     });
     const all = text.join("\n");
@@ -148,6 +152,7 @@ describe("Skript-PDF", () => {
   it("setzt den Szenenkopf als Kasten: Wer, Mein Teil, Technik nummeriert", async () => {
     const { text } = await render({
       roleIds: ["a"],
+      memberRoleIds: [],
       hiddenCues: ["ton"],
       sceneHeader: ["roles", "mine", "cues", "notes"],
     });

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -8,7 +10,10 @@ import { align, blockSimilarity, similarity } from "./diff";
 import { parseScriptPdf } from "./import";
 import { readImportReport, readParts } from "./json";
 import { jaroWinkler, roleKey, splitSpeakerRoles } from "./roles";
+import { isEnsembleRole } from "./casting";
+import { inheritSceneKeys } from "./scene-keys";
 import type { ScriptImportReport } from "./service";
+import { sceneTitleKey } from "./stats";
 import type { ScriptBlock } from "./types";
 
 /** Prüfschritt und Freigabe einer Fassung (docs/Plan/skript-plan.md, Phase 3). */
@@ -208,6 +213,14 @@ async function requireDraft(versionId: string) {
   return version;
 }
 
+/** Gruppen am Namen erkennen; „Alle …“ = alle Besetzten (E-U1), sonst wer in der Szene ist. */
+export function defaultRoleKind(
+  name: string,
+): Pick<Prisma.ScriptRoleCreateManyInput, "kind" | "groupMode"> {
+  if (!isEnsembleRole(name)) return {};
+  return { kind: "group", groupMode: /^alle\b/iu.test(name) ? "cast" : "present" };
+}
+
 export type RoleAssignment = { name: string } & ({ roleId: string } | { createName: string });
 
 /**
@@ -245,7 +258,12 @@ export async function saveRoleAssignments(
           roleId = existing.id;
         } else {
           const created = await tx.scriptRole.create({
-            data: { showId: version.showId, name, createdById: userId },
+            data: {
+              showId: version.showId,
+              name,
+              createdById: userId,
+              ...defaultRoleKind(name),
+            },
             select: { id: true, name: true, aliases: true },
           });
           roles.push(created);
@@ -382,6 +400,40 @@ async function keepOwnLineage(versionId: string, previousId: string) {
   return result;
 }
 
+/** Szenen-Schlüssel der Vorfassung vererben (nach der lineageId-Übernahme). */
+async function sceneKeysFrom(
+  versionId: string,
+  previousId: string,
+  inherited: ReadonlyMap<string, string>,
+) {
+  const load = (id: string) =>
+    prisma.scriptScene.findMany({
+      where: { versionId: id },
+      select: {
+        id: true,
+        title: true,
+        sceneKey: true,
+        blocks: { select: { id: true, lineageId: true } },
+      },
+    });
+  const [current, before] = await Promise.all([load(versionId), load(previousId)]);
+  const keys = inheritSceneKeys({
+    scenes: current.map((scene) => ({
+      id: scene.id,
+      titleKey: sceneTitleKey(scene.title),
+      lineageIds: scene.blocks.map((block) => inherited.get(block.id) ?? block.lineageId),
+    })),
+    previous: before.map((scene) => ({
+      sceneKey: scene.sceneKey,
+      titleKey: sceneTitleKey(scene.title),
+      lineageIds: scene.blocks.map((block) => block.lineageId),
+    })),
+  });
+  // Szenen ohne Vorgänger bekommen einen eigenen Schlüssel (der vorläufige könnte doppelt sein).
+  for (const scene of current) if (!keys.has(scene.id)) keys.set(scene.id, randomUUID());
+  return keys;
+}
+
 export async function releaseScriptVersion(versionId: string, userId: string) {
   const version = await requireDraft(versionId);
   const review = await loadScriptReview(versionId);
@@ -394,9 +446,13 @@ export async function releaseScriptVersion(versionId: string, userId: string) {
     select: { id: true },
   });
   const inherited = previous ? await keepOwnLineage(versionId, previous.id) : new Map();
+  const sceneKeys = previous ? await sceneKeysFrom(versionId, previous.id, inherited) : new Map();
   await prisma.$transaction([
     ...[...inherited].map(([id, lineageId]) =>
       prisma.scriptBlock.update({ where: { id }, data: { lineageId } }),
+    ),
+    ...[...sceneKeys].map(([id, sceneKey]) =>
+      prisma.scriptScene.update({ where: { id }, data: { sceneKey } }),
     ),
     prisma.scriptVersion.update({
       where: { id: versionId },

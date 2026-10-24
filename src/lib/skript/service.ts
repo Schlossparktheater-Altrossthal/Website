@@ -206,6 +206,17 @@ async function saveVersion(
         ).map((scene) => [sceneTitleKey(scene.title), scene.measuredSeconds])
       : [],
   );
+  // Vorläufiger Szenen-Schlüssel über den Titel; die Freigabe vererbt ihn über die Absätze.
+  const titleKeys = new Map(
+    basedOn
+      ? (
+          await prisma.scriptScene.findMany({
+            where: { versionId: basedOn.id },
+            select: { title: true, sceneKey: true },
+          })
+        ).map((scene) => [sceneTitleKey(scene.title), scene.sceneKey])
+      : [],
+  );
 
   const scenes: Prisma.ScriptSceneCreateManyInput[] = [];
   const blocks: Prisma.ScriptBlockCreateManyInput[] = [];
@@ -217,6 +228,7 @@ async function saveVersion(
       versionId: id,
       sequence: sceneIndex,
       title: scene.title,
+      sceneKey: titleKeys.get(sceneTitleKey(scene.title)) ?? randomUUID(),
       measuredSeconds: measured.get(sceneTitleKey(scene.title)) ?? null,
     });
     for (const block of scene.blocks) {

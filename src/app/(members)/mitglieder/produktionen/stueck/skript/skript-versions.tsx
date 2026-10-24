@@ -13,6 +13,7 @@ import {
   SparklesIcon,
   TrashIcon,
   UploadIcon,
+  UsersIcon,
 } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,16 @@ export function ScriptVersions({
           </span>
           <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </Link>
+      ) : null}
+      {canManage && versions.length ? (
+        <ListRowGroup variant="inset">
+          <ListRow
+            href={`${BASE}&bereich=rollen`}
+            leading={<UsersIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
+            title="Rollen zuordnen"
+            description="Stück-Rollen, Zusammenführen, Gruppen wie „Alle“"
+          />
+        </ListRowGroup>
       ) : null}
       {canManage ? <ScriptUpload showId={showId} /> : null}
       {pending.map((item) => (

@@ -4,6 +4,7 @@ import { loadScriptReader } from "../reader";
 import { tokenizeBlock } from "./chunks";
 import { itemKey, sceneProgress, summarize, type LearnItem, type StoredCard } from "./plan";
 import { latestReleasedVersion } from "./service";
+import { learnRoleIds } from "../role-links";
 import { isSpoken } from "../types";
 
 /** Skript-Karte auf dem Dashboard: aktuelle Fassung und – mit Rolle – der eigene Lernstand. */
@@ -49,9 +50,10 @@ export async function loadDashboardScript(
 
   // Gleiche Abschnitte wie im Lernmodus (buildUnits), nur die eigenen Rollen.
   const own = new Set(reader.ownRoleIds);
+  const groupIds = new Set(reader.roles.filter((r) => r.kind === "group").map((r) => r.id));
   const items: LearnItem[] = [];
   reader.blocks.forEach((block, blockIndex) => {
-    const roles = block.roleIds.filter((id) => own.has(id));
+    const roles = learnRoleIds(block, own, true, groupIds);
     if (!isSpoken(block.kind) || !roles.length) return;
     for (const chunk of tokenizeBlock(block.parts).chunks) {
       for (const roleId of roles) {

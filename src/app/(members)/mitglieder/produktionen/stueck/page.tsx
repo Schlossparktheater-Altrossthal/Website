@@ -17,13 +17,15 @@ import { StueckClient, StueckNav, type StueckView } from "./stueck-client";
 
 const PATH = "/mitglieder/produktionen/stueck";
 
-type PageProps = { searchParams: Promise<{ ansicht?: string; fassung?: string }> };
+type PageProps = {
+  searchParams: Promise<{ ansicht?: string; fassung?: string; bereich?: string }>;
+};
 
 const VIEWS: readonly StueckView[] = ["ablauf", "rollen", "auftritte", "skript"];
 
 /** Das Stück: Ablauf (Akte und Szenen), Rollen und Auftrittsplan einer Produktion. */
 export default async function StueckPage({ searchParams }: PageProps) {
-  const { ansicht, fassung } = await searchParams;
+  const { ansicht, fassung, bereich } = await searchParams;
   const view: StueckView = VIEWS.find((v) => v === ansicht) ?? "ablauf";
   const session = await requireAuth();
   const breadcrumbs = [membersNavigationBreadcrumb(PATH)];
@@ -59,6 +61,7 @@ export default async function StueckPage({ searchParams }: PageProps) {
           <SkriptView
             showId={production.id}
             versionId={fassung ?? null}
+            section={bereich === "rollen" && canManageScript ? "roles" : null}
             canManage={canManageScript}
           />
         ) : (

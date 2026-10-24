@@ -12,6 +12,7 @@ import type { LearnPageData } from "@/lib/skript/learn/service";
 import { readStored, writeStored } from "../../skript/shared";
 import { submitReviewsAction } from "./actions";
 import { isSpoken } from "@/lib/skript/types";
+import { learnRoleIds } from "@/lib/skript/role-links";
 
 /** Zustand des Lernmodus im Browser (docs/Plan/lernmodus-plan.md). */
 
@@ -21,6 +22,8 @@ export type LearnSettings = {
   speak: boolean;
   typing: boolean;
   fontSize: number;
+  /** Passagen von Gruppenrollen („Alle“), zu denen man gehört, mitlernen (E-U2). */
+  groups?: boolean;
 };
 
 /**
@@ -94,12 +97,14 @@ export function buildUnits(
   reader: ScriptReaderData,
   tokenized: ReadonlyMap<string, TokenizedBlock>,
   roleIds: readonly string[],
+  includeGroups = true,
 ) {
   const selected = new Set(roleIds);
+  const groupIds = new Set(reader.roles.filter((r) => r.kind === "group").map((r) => r.id));
   const items: LearnItem[] = [];
   const units: Unit[] = [];
   reader.blocks.forEach((block, blockIndex) => {
-    const roles = block.roleIds.filter((id) => selected.has(id));
+    const roles = learnRoleIds(block, selected, includeGroups, groupIds);
     if (!isSpoken(block.kind) || !roles.length) return;
     const tokens = tokenized.get(block.id);
     for (const chunk of tokens?.chunks ?? []) {

@@ -11,7 +11,7 @@ export type CompareBlock = {
   /** Absatz der neuen Fassung (bei „gestrichen“ der alten). */
   block: ReaderBlock;
   before: ReaderBlock | null;
-  /** Rollen aus alter und neuer Fassung – „betrifft mich“ gilt für beide Seiten. */
+  /** Rollen aus alter und neuer Fassung (inkl. Gruppenmitglieder) – „betrifft mich“ gilt für beide Seiten. */
   roleIds: string[];
   /** Gewerke, deren Hinweise sich hier geändert haben. */
   cueCategories: CueCategory[];
@@ -85,7 +85,9 @@ export function compareReaderData(
         type: change.type,
         block,
         before: old,
-        roleIds: [...new Set([...(old?.roleIds ?? []), ...(now?.roleIds ?? [])])],
+        roleIds: [
+          ...new Set([old, now].flatMap((b) => (b ? [...b.roleIds, ...b.memberRoleIds] : []))),
+        ],
         cueCategories: change.type === "same" ? [] : changedCues(old, now),
         speakerChanged: !!old && !!now && old.speaker !== now.speaker,
         words:

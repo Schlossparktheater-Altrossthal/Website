@@ -14,6 +14,7 @@ function speech(roleId: string, speaker: string, ...parts: ScriptPart[]): Reader
     kind: "speech",
     speaker,
     roleIds: [roleId],
+    memberRoleIds: [],
     parts,
     words: 0,
     page: 1,
@@ -42,8 +43,8 @@ function version(id: string, blocks: ReaderBlock[]): ScriptReaderData {
     viewerId: null,
     blocks,
     roles: [
-      { id: "a", name: "Atreju", lines: 0, words: 0, sceneIds: [] },
-      { id: "b", name: "Bastian", lines: 0, words: 0, sceneIds: [] },
+      { id: "a", name: "Atreju", kind: "person", lines: 0, words: 0, sceneIds: [] },
+      { id: "b", name: "Bastian", kind: "person", lines: 0, words: 0, sceneIds: [] },
     ],
     ownRoleIds: ["a"],
   };

@@ -566,6 +566,7 @@ model Show {
   scriptVersions          ScriptVersion[]
   scriptPendingImports    ScriptPendingImport[]
   scriptRoles             ScriptRole[]
+  scriptRoleMerges        ScriptRoleMerge[]
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
   scriptExportPresets     ScriptExportPreset[]
@@ -926,6 +927,7 @@ model Character {
   objectCharacters     ObjectCharacter[]
   requirements         SceneRequirement[]
   directionWishTargets DirectionWishTarget[]
+  scriptRoleLinks      ScriptRoleLink[]
 
   @@index([showId, order])
 }
@@ -4179,6 +4181,8 @@ model ScriptScene {
   versionId       String
   sequence        Int
   title           String
+  /// Stabil über Fassungen: neue Fassung erbt den Schlüssel der Szene, aus der die meisten Absätze stammen.
+  sceneKey        String        @default(cuid())
   /// Gemessene Spieldauer in Sekunden (z. B. aus Durchläufen); ersetzt die Schätzung aus Wörtern.
   /// Neue Fassungen übernehmen sie bei gleichem Szenentitel (docs/Plan/skript-auswertungen-plan.md).
   measuredSeconds Int?
@@ -4196,6 +4200,12 @@ model ScriptRole {
   showId      String
   name        String
   aliases     String[]          @default([])
+  /// Person, Gruppe („Alle“, „Chor“) oder ignorieren (docs/Plan/skript-uebernahme-plan.md).
+  kind        ScriptRoleKind    @default(person)
+  /// Nur bei Gruppen: wer standardmäßig dazugehört.
+  groupMode   ScriptGroupMode?
+  /// Gesetzt, sobald die Stück-Rollen von Hand zugeordnet wurden; vorher gilt Namensgleichheit.
+  linkedAt    DateTime?
   createdById String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
@@ -4203,8 +4213,80 @@ model ScriptRole {
   createdBy   User?             @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
   blocks      ScriptBlockRole[]
   learnCards  ScriptLearnCard[]
+  links       ScriptRoleLink[]
+  groupRules  ScriptGroupRule[] @relation("ScriptGroupRuleGroup")
+  memberRules ScriptGroupRule[] @relation("ScriptGroupRuleMember")
 
   @@unique([showId, name])
+}
+
+enum ScriptRoleKind {
+  person
+  group
+  ignore
+}
+
+enum ScriptGroupMode {
+  /// alle Besetzten der Produktion
+  cast
+  /// alle Rollen, die in der Szene vorkommen
+  present
+  /// nur die Rollen aus den Regeln ohne Szene/Absatz
+  fixed
+}
+
+enum ScriptGroupRuleMode {
+  include
+  exclude
+}
+
+/// Skript-Rolle → Stück-Rolle(n). Ersetzt die Namensgleichheit, sobald `ScriptRole.linkedAt` gesetzt ist.
+model ScriptRoleLink {
+  scriptRoleId String
+  characterId  String
+  createdById  String?
+  createdAt    DateTime   @default(now())
+  scriptRole   ScriptRole @relation(fields: [scriptRoleId], references: [id], onDelete: Cascade)
+  character    Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([scriptRoleId, characterId])
+  @@index([characterId])
+}
+
+/// Wer gehört zu einer Gruppenrolle: ohne Szene/Absatz = Grundliste, sonst Ausnahme.
+/// Vorrang: Absatz (`lineageId`) vor Szene (`sceneKey`) vor Grundregel.
+model ScriptGroupRule {
+  id           String              @id @default(cuid())
+  groupRoleId  String
+  memberRoleId String
+  sceneKey     String?
+  lineageId    String?
+  mode         ScriptGroupRuleMode @default(include)
+  createdById  String?
+  createdAt    DateTime            @default(now())
+  groupRole    ScriptRole          @relation("ScriptGroupRuleGroup", fields: [groupRoleId], references: [id], onDelete: Cascade)
+  memberRole   ScriptRole          @relation("ScriptGroupRuleMember", fields: [memberRoleId], references: [id], onDelete: Cascade)
+
+  @@index([groupRoleId])
+  @@index([memberRoleId])
+}
+
+/// Zusammenführung zweier Skript-Rollen – Protokoll für „Rückgängig“ (E8: wer und wann).
+model ScriptRoleMerge {
+  id           String    @id @default(cuid())
+  showId       String
+  targetRoleId String
+  /// Die aufgelöste Rolle, wie sie vorher war (Name, Aliase, Art, Links, Regeln).
+  source       Json
+  /// Umgehängte Absätze und Lernkarten.
+  blockIds     String[]  @default([])
+  learnCardIds String[]  @default([])
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  undoneAt     DateTime?
+  show         Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@index([showId, createdAt])
 }
 
 /// Absatz: Replik oder Anweisung. `lineageId` bleibt über Fassungen gleich (Kommentare hängen daran).

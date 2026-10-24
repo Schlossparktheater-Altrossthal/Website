@@ -4,6 +4,7 @@ import { DIRECTION_TEAM_TEMPLATE_SLUGS } from "@/lib/regie/wishes";
 
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { readParts } from "./json";
+import { resolveGroupMembers, roleIdsByUser, type LinkRole, type RoleKind } from "./role-links";
 import { roleKey, splitSpeakerRoles } from "./roles";
 import { isSpoken, type ScriptBlockKind, type ScriptPart } from "./types";
 
@@ -19,6 +20,8 @@ export type ReaderBlock = {
   kind: ScriptBlockKind;
   speaker: string | null;
   roleIds: string[];
+  /** Bei Gruppenrollen („Alle“): wer hier mitspricht (docs/Plan/skript-uebernahme-plan.md). */
+  memberRoleIds: string[];
   parts: ScriptPart[];
   words: number;
   page: number | null;
@@ -36,6 +39,7 @@ export type ReaderScene = {
 export type ReaderRole = {
   id: string;
   name: string;
+  kind: RoleKind;
   lines: number;
   words: number;
   sceneIds: string[];
@@ -54,7 +58,7 @@ export type ScriptReaderData = {
   scenes: ReaderScene[];
   blocks: ReaderBlock[];
   roles: ReaderRole[];
-  /** Skript-Rollen, deren Name zu einer eigenen Besetzung im Stück passt. */
+  /** Skript-Rollen der eigenen Besetzung (verknüpft oder per Name, siehe role-links.ts). */
   ownRoleIds: string[];
   /** Mitwirkende fürs Deckblatt; ohne Regie-Angabe die Mitglieder des Gewerks Regie. */
   credits: ScriptCredit[];
@@ -85,7 +89,7 @@ export async function loadScriptReader(
       show: { select: { title: true, year: true, scriptCredits: true } },
       scenes: {
         orderBy: { sequence: "asc" },
-        select: { id: true, title: true, measuredSeconds: true },
+        select: { id: true, title: true, sceneKey: true, measuredSeconds: true },
       },
       blocks: {
         orderBy: { sequence: "asc" },
@@ -108,11 +112,32 @@ export async function loadScriptReader(
   const [scriptRoles, castings, members, directors] = await Promise.all([
     prisma.scriptRole.findMany({
       where: { showId: version.showId },
-      select: { id: true, name: true, aliases: true },
+      select: {
+        id: true,
+        name: true,
+        aliases: true,
+        kind: true,
+        groupMode: true,
+        linkedAt: true,
+        links: { select: { characterId: true } },
+        groupRules: {
+          select: {
+            groupRoleId: true,
+            memberRoleId: true,
+            sceneKey: true,
+            lineageId: true,
+            mode: true,
+          },
+        },
+      },
     }),
     prisma.characterCasting.findMany({
       where: { character: { showId: version.showId } },
-      select: { userId: true, character: { select: { name: true, shortName: true } } },
+      select: {
+        userId: true,
+        characterId: true,
+        character: { select: { name: true, shortName: true } },
+      },
     }),
     prisma.productionMembership.findMany({
       where: { showId: version.showId, status: { not: "left" } },
@@ -149,6 +174,7 @@ export async function loadScriptReader(
       kind: block.kind,
       speaker: block.speaker,
       roleIds,
+      memberRoleIds: [] as string[],
       parts: readParts(block.parts),
       words: block.wordCount,
       page: block.page,
@@ -171,7 +197,12 @@ export async function loadScriptReader(
 
   const known = [
     ...scriptRoles,
-    ...[...provisional].map(([id, name]) => ({ id, name, aliases: [] as string[] })),
+    ...[...provisional].map(([id, name]) => ({
+      id,
+      name,
+      aliases: [] as string[],
+      kind: "person" as RoleKind,
+    })),
   ];
   const roles: ReaderRole[] = known
     .filter((role) => stats.has(role.id))
@@ -180,6 +211,7 @@ export async function loadScriptReader(
       return {
         id: role.id,
         name: role.name,
+        kind: role.kind,
         lines: entry?.lines ?? 0,
         words: entry?.words ?? 0,
         sceneIds: entry ? [...entry.scenes] : [],
@@ -187,22 +219,33 @@ export async function loadScriptReader(
     })
     .sort((a, b) => b.words - a.words || a.name.localeCompare(b.name, "de"));
 
-  const castKeysByUser = new Map<string, Set<string>>();
-  for (const { userId: castUser, character } of castings) {
-    const keys = castKeysByUser.get(castUser) ?? new Set<string>();
-    for (const name of [character.name, character.shortName]) if (name) keys.add(roleKey(name));
-    castKeysByUser.set(castUser, keys);
-  }
-  const rolesFor = (personId: string | null) => {
-    const keys = personId ? castKeysByUser.get(personId) : undefined;
-    if (!keys) return [];
-    return roles
-      .filter((role) => {
-        const original = known.find((candidate) => candidate.id === role.id);
-        return [role.name, ...(original?.aliases ?? [])].some((name) => keys.has(roleKey(name)));
-      })
-      .map((role) => role.id);
-  };
+  const linkRoles: LinkRole[] = scriptRoles.map((role) => ({
+    id: role.id,
+    name: role.name,
+    aliases: role.aliases,
+    kind: role.kind,
+    groupMode: role.groupMode,
+    linked: !!role.linkedAt,
+    characterIds: role.links.map((link) => link.characterId),
+  }));
+  const byUser = roleIdsByUser(
+    linkRoles,
+    castings.map((c) => ({
+      userId: c.userId,
+      characterId: c.characterId,
+      name: c.character.name,
+      shortName: c.character.shortName,
+    })),
+  );
+  const rolesFor = (personId: string | null) => (personId ? (byUser.get(personId) ?? []) : []);
+  resolveGroups(
+    blocks,
+    version.scenes,
+    linkRoles,
+    scriptRoles.flatMap((r) => r.groupRules),
+    byUser,
+  );
+
   const ownRoleIds = rolesFor(userId);
 
   const people = new Map<string, ReaderPerson>();
@@ -242,4 +285,47 @@ export async function loadScriptReader(
     viewerId: userId,
     people: [...people.values()].sort((a, b) => a.name.localeCompare(b.name, "de")),
   };
+}
+
+/** Gruppenrollen je Absatz auflösen: `memberRoleIds` der Absätze füllen. */
+function resolveGroups(
+  blocks: ReaderBlock[],
+  scenes: { id: string; sceneKey: string }[],
+  roles: LinkRole[],
+  rules: Parameters<typeof resolveGroupMembers>[0]["rules"],
+  byUser: ReadonlyMap<string, string[]>,
+) {
+  const groups = new Map(roles.filter((r) => r.kind === "group").map((r) => [r.id, r]));
+  if (!groups.size) return;
+  const persons = new Set(roles.filter((r) => r.kind === "person").map((r) => r.id));
+  const cast = new Set([...byUser.values()].flat().filter((id) => persons.has(id)));
+  const castRoleIds = cast.size ? [...cast] : [...persons];
+  const sceneKeys = new Map(scenes.map((scene) => [scene.id, scene.sceneKey]));
+  const sceneRoles = new Map<string, Set<string>>();
+  for (const block of blocks) {
+    const set = sceneRoles.get(block.sceneId) ?? new Set<string>();
+    for (const id of block.roleIds) if (persons.has(id)) set.add(id);
+    sceneRoles.set(block.sceneId, set);
+  }
+  for (const block of blocks) {
+    const members = new Set<string>();
+    for (const id of block.roleIds) {
+      const group = groups.get(id);
+      if (!group) continue;
+      for (const member of resolveGroupMembers({
+        group,
+        rules,
+        block: {
+          lineageId: block.lineageId,
+          sceneKey: sceneKeys.get(block.sceneId) ?? "",
+          roleIds: block.roleIds,
+        },
+        castRoleIds,
+        sceneRoleIds: [...(sceneRoles.get(block.sceneId) ?? [])],
+      })) {
+        members.add(member);
+      }
+    }
+    block.memberRoleIds = [...members];
+  }
 }
