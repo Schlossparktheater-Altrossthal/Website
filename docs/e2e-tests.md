@@ -287,3 +287,10 @@ claude mcp add playwright --scope local -- npx @playwright/mcp@latest
 Anmelden: im MCP-Browser `/api/dev/screenshot-session?role=admin&target=/mitglieder`
 öffnen (lokal). Auf Staging braucht die Route den Header – dort die Skripte oben
 nutzen oder Playwright-MCP mit `--storage-state e2e/.auth/<rolle>.json` starten.
+
+### Lernmodus (`e2e/lernen.spec.ts`)
+
+Der Test startet über „Text lernen“ der aktiven Produktion. Hat sie keine freigegebene Fassung (auf
+Staging z. B. „In 80 Tagen um die Welt“), wird er übersprungen – mit `E2E_LERNEN_SHOW=<showId>` läuft
+er gegen eine feste Produktion mit freigegebenem Skript. Screenshots mit
+`E2E_SKRIPT_SCREENSHOTS=<ordner>`.
