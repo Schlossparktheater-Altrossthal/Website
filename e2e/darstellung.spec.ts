@@ -35,22 +35,26 @@ test.describe("als member", () => {
 
   test("Farbmodus wird gespeichert und sofort angewendet", async ({ page }) => {
     await page.goto("/mitglieder/profil?bereich=darstellung");
-    const dark = page.getByRole("radiogroup", { name: "Farbmodus" }).getByRole("radio", {
-      name: "Dunkel",
-    });
-    await clickUntil(dark, () => expect(dark).toBeChecked({ timeout: 2_000 }));
-    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    const group = page.getByRole("radiogroup", { name: "Farbmodus" });
+    await expect(group).toBeVisible();
+    // Den Modus wählen, der nicht schon Vorgabe der Seite ist – sonst ist er bereits
+    // angehakt, der Klick speichert nichts (andere Tests stellen die Seite auf dunkel).
+    const siteDark = /\bdark\b/.test((await page.locator("html").getAttribute("class")) ?? "");
+    const target = siteDark ? "light" : "dark";
+    const radio = group.getByRole("radio", { name: siteDark ? "Hell" : "Dunkel" });
+    await clickUntil(radio, () => expect(radio).toBeChecked({ timeout: 2_000 }));
+    await expect(page.locator("html")).toHaveAttribute("data-color-mode", target);
 
     await expect
       .poll(async () => {
         const response = await page.request.get("/api/profile/appearance");
         return ((await response.json()) as { colorMode: string | null }).colorMode;
       })
-      .toBe("dark");
+      .toBe(target);
 
-    // Nach dem Neuladen rendert schon der Server dunkel.
+    // Nach dem Neuladen rendert schon der Server den gewählten Modus.
     await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("data-color-mode", "dark");
+    await expect(page.locator("html")).toHaveAttribute("data-color-mode", target);
 
     // Zurück auf die Seitenvorgabe, damit wiederholte Läufe gleich starten
     const reset = await page.request.put("/api/profile/appearance", {

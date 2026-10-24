@@ -20,8 +20,7 @@ test.describe("als admin", () => {
     const roles = page.getByRole("link", { name: /Rollen zuordnen/ });
     test.skip(!(await roles.count()), "Produktion ohne Skript-Fassung");
 
-    await roles.click();
-    await expect(page).toHaveURL(/bereich=rollen/);
+    await clickUntil(roles, () => expect(page).toHaveURL(/bereich=rollen/, { timeout: 2_000 }));
     await expect(page.getByText("Rollen im Skript")).toBeVisible();
     const first = page
       .getByRole("button")
