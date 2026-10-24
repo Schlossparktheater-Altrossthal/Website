@@ -16,7 +16,11 @@ import { loadProfileChecklist } from "@/lib/profile-completion-server";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getWhatsappNoticeKey, readDismissedNoticeKeys } from "@/lib/notice-dismissals";
 import { databaseEnabled } from "@/lib/dev-database";
-import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
+import {
+  GENERAL_EVENT_WHERE,
+  viewableEventWhere,
+  visibleGeneralEventWhere,
+} from "@/lib/calendar/entries";
 import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
 type MembershipSummary = {
@@ -89,13 +93,19 @@ export const GET = withRoute({ name: "dashboard/overview.get" }, async ({ sessio
             where: { showId: activeProductionId, ...currentMembershipWhere() },
           })
         : Promise.resolve(0),
+      // Nur Proben, die die Person auch im Kalender sieht (ohne Entwürfe/Absagen).
       prisma.calendarEvent.count({
         where: {
           kind: "REHEARSAL",
+          ...GENERAL_EVENT_WHERE,
           start: {
             gte: startOfCurrentWeek,
             lte: endOfCurrentWeek,
           },
+          AND: [
+            activeProductionId ? { OR: [{ showId: activeProductionId }, { showId: null }] } : {},
+            viewableEventWhere(userId, now),
+          ],
         },
       }),
       prisma.notificationRecipient.count({
