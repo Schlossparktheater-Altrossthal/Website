@@ -139,7 +139,7 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
                     title={
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate">{role.name}</span>
-                        {role.kind !== "ignore" && !role.characterIds.length ? (
+                        {role.kind === "person" && !role.characterIds.length ? (
                           <Badge variant="warning" size="sm">
                             offen
                           </Badge>
