@@ -15,7 +15,7 @@ HEAD = re.search(r'<path d="([^"]*)"', open(os.path.join(ROH, 'logo-katze-kopf.s
 RED, BLACK = '#E84820', '#171717'
 CAT_BOX = (436.4, 415.7, 637.4, 736.4)       # Umriss der Katze (gemessen)
 
-def cat(height, cx=512, cy=520):
+def cat(height, cx=512, cy=512):
     x0, y0, x1, y1 = CAT_BOX; k = height / (y1 - y0)
     tx, ty = cx - (x0 + x1) / 2 * k, cy - (y0 + y1) / 2 * k
     return f'<path transform="translate({tx:.1f} {ty:.1f}) scale({k:.4f})" d="{CAT}" fill="{BLACK}" fill-rule="nonzero"/>'
@@ -26,9 +26,9 @@ def icon(ring_scale, cat_height):
 
 icons = {
     # any: Ring fast randlos (R = 456 von 512), iOS/Android runden selbst ab
-    'app-icon': icon(1.0, 620),
+    'app-icon': icon(1.0, 760),
     # maskable: alles in der sicheren Zone (Kreis r = 0,4 × Kante = 410)
-    'app-icon-maskable': icon(0.88, 620),
+    'app-icon-maskable': icon(0.88, 760),
 }
 for n, b in icons.items():
     open(os.path.join(OUT, n + '.svg'), 'w').write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">{b}</svg>')
