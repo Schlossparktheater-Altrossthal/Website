@@ -23,6 +23,7 @@ Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Katzen-Vereinfachung im Test,
 | `konzept/ring-bsz-abgleich.png` | Konstruktion gegen BSZ-Original (96 % Deckung, Rest Randpixel) |
 | `konzept/katze/stufe-*.svg` | Katze in 4 Vereinfachungsstufen (Füllung `currentColor`) |
 | `konzept/katze/groessentest.png` | Alle Stufen in 4 Icon-Aufbauten bei 16–64 px, pixelgenau ×4 vergrößert |
+| `konzept/icons/*.svg` | Icon-Satz mit Symbol 3a: Favicon rot/blau, App-Icon (maskable), Statusleiste, Symbol schwarz |
 | `skripte/` | Mess- und Erzeugungsskripte, siehe unten |
 
 ## Messergebnisse
@@ -132,6 +133,12 @@ Symbol-Varianten 3a/3b (2026-10-25, Entscheidung: Stufe 3 darf eigenständig und
 - 3b: näher am Logo (Schwanz vorn). Bei 16 px verschmilzt der Schwanz aber mit dem Sockel.
 - Im Größentest sitzen 3a/3b in den Kreisen etwas tief und links, weil die Platzierung noch für die hohen Stufen 1–3 eingestellt ist. Beim Ausarbeiten optisch zentrieren.
 
+**Entscheidung 2026-10-25: Symbol 3a** für Favicon, App-Icon und Statusleiste.
+- Feinschliff: Sockel, Brust und Schwanz liegen auf ganzen Rasterwerten, damit das Symbol bei 24 px scharf ist (vorher lagen die Schwanzkanten auf x,5).
+- Optische Mitte (12,0 | 12,5) im 24er-Raster = Mittelwert aus Flächenschwerpunkt und Mitte der Umrandung, siehe `skripte/icons.py`.
+- Icon-Satz in `konzept/icons/`: `favicon-rot` (Rahmen + Vorhangrot, schwarze Katze), `favicon-blau` (BSZ-Blau, weiße Katze), `app-icon-maskable` (Vollfläche, Motiv in der sicheren Zone), `statusleiste` (weiß, nur Alpha zählt), `symbol-schwarz`.
+- Bei 16 px liest sich `favicon-blau` am klarsten (höchster Kontrast). Bei `favicon-rot` wird der schwarze Rahmen bei 16 px weich.
+
 Offen (ältere Notiz zu Stufe 3): Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
 
 ## Nächste Schritte
@@ -156,7 +163,8 @@ python -I skripte/sheet.py                                               # konze
 python -I skripte/ring_geometry.py                                       # Segmentwinkel der Konstruktion
 python -I skripte/verify_ring.py                                         # konzept/ring-bsz-abgleich.png + Deckung
 python -I skripte/sheet2.py                                              # Konzeptblatt-2-SVGs + konzept-2.html
-python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg
+python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg (Stufe 1–3, 4)
+python -I skripte/icons.py                                               # konzept/icons/*.svg mit Symbol 3a
 python -I skripte/size_test.py && node skripte/size_test.cjs "$PW" && python -I skripte/size_sheet.py   # groessentest.png
 PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
 node skripte/p.cjs "$PW"                                                 # konzeptblatt-1.png/.pdf
