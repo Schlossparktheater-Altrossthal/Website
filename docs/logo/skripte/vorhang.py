@@ -55,7 +55,7 @@ SWAG1_BOT = xy({424: 235, 432: 241, 440: 247, 448: 251, 456: 255, 464: 259, 472:
 SWAG2_TOP = xy({416: 266, 424: 272, 432: 277, 440: 281, 448: 285, 456: 289, 464: 292, 472: 294, 480: 296, 512: 299})
 SWAG2_BOT = xy({416: 274, 424: 282, 432: 289, 440: 295, 448: 300, 456: 305, 464: 308, 472: 311, 480: 314, 496: 317, 512: 318})
 
-INNER = yx({220: 413, 240: 411, 260: 408, 280: 404, 300: 398, 320: 393, 340: 387, 360: 380, 380: 371, 400: 362,
+INNER = yx({510: 276, 220: 413, 240: 411, 260: 408, 280: 404, 300: 398, 320: 393, 340: 387, 360: 380, 380: 371, 400: 362,
             420: 351, 440: 338, 460: 324, 480: 307, 500: 287, 520: 263})
 BAND_L = yx({250: 403, 280: 393, 300: 386, 320: 378, 340: 369, 360: 360, 380: 350, 400: 338, 420: 325, 440: 311,
              460: 295, 480: 276, 500: 254})
@@ -67,8 +67,11 @@ LOW_R = yx({570: 257, 600: 267, 620: 274, 640: 282, 660: 288, 680: 295, 700: 302
 LA_L = yx({570: 201, 600: 207, 640: 214, 680: 218}); LA_R = yx({570: 213, 600: 218, 640: 224, 680: 227})
 LB_L = yx({570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({570: 243, 600: 251, 640: 260, 680: 268, 720: 275})
 
-TIE = (522, 566)                            # Raffhalter oben/unten
-TIE_KNOT = (222, 256)                       # heller Knoten x
+TIE = (522, 566)                            # Raffhalter: Falten laufen bis TIE[0] unter das Band, unten ab TIE[1]
+# Raffhalter-Band: Oberkante fällt nach rechts ab (Falten enden gestaffelt darauf), Unterkante fast waagerecht
+BAND_TOP = xy({171: 513, 185: 515, 200: 518, 215: 520, 230: 523, 245: 525})
+BAND_BOT = xy({250: 561, 235: 562, 222: 563, 205: 564, 190: 564, 172: 565})
+KNOT_X = 224
 
 
 def c(p0, p3, pts, log, name):
@@ -93,27 +96,32 @@ def build(RED, FOLD):
     swag2 = f'<path fill="{FOLD}" d="M{s2[0]},{s2[1]}{cs(s2, SWAG2_TOP, log, "Falte 2 oben")}' \
             + _rev_sym(s2, SWAG2_BOT, log, 'Falte 2 unten') + 'Z"/>'
     # Seitenvorhang links oben: außen nur Gerade, der Bühnenkreis schneidet ab
-    tip, end = (418, TOP), (258, TIE[0] + 2)
-    upper = f'<path fill="{RED}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}H100Z"/>'
-    btip, bend = (416, 200), (224, TIE[0] + 2)
-    band = f'<path fill="{FOLD}" d="M{btip[0]},{btip[1]}{c(btip, end, INNER, log, "Saum rechts")}' \
-           f'H{bend[0]}{c(bend, btip, BAND_L[::-1], log, "Saum links")}Z"/>'
+    # Silhouette dunkel (eine einzige Außenkante), helle Fläche darüber endet an der linken Saumkante
+    tip, end = (418, TOP), (259, TIE[0] + 4)
+    btip, bend = (416, 200), (222, TIE[0] + 8)
+    upper = f'<path fill="{FOLD}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}H100Z"/>'
+    band = f'<path fill="{RED}" d="M100,{TOP}H{btip[0]}V{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
     folds = ''
-    for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (205, TIE[0] + 2), (214, TIE[0] + 2)),
-                                   ('Falte B', (277, 316), F3_L, F3_R, (186, TIE[0] + 2), (196, TIE[0] + 2))):
+    for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (203, TIE[0] + 8), (212, TIE[0] + 8)),
+                                   ('Falte B', (277, 316), F3_L, F3_R, (184, TIE[0] + 8), (194, TIE[0] + 8))):
         folds += f'<path fill="{FOLD}" d="M{tp[0]},{tp[1]}{c(tp, e2, r, log, name + " rechts")}' \
                  f'L{e1[0]},{e1[1]}{c(e1, tp, l[::-1], log, name + " links")}Z"/>'
     # Raffhalter
-    tie = (f'<path fill="{FOLD}" d="M100,{TIE[0]}H{TIE_KNOT[0]}V{TIE[1]}H100Z"/>'
-           f'<path fill="{RED}" d="M{TIE_KNOT[0]},{TIE[0] + 2}H{TIE_KNOT[1]}L{TIE_KNOT[1] - 4},{TIE[1]}H{TIE_KNOT[0]}Z"/>')
+    b0, b1, b2, b3 = (150, 510), (258, 527), (254, 561), (150, 566)
+    tie = (f'<path fill="{FOLD}" d="M{b0[0]},{b0[1]}{c(b0, b1, BAND_TOP, log, "Raffhalter oben")}'
+           f'L{b2[0]},{b2[1]}{c(b2, b3, BAND_BOT, log, "Raffhalter unten")}Z"/>')
+    # Knoten von Hand (zu wenig Messpunkte für eine stabile Anpassung): Oberkante leicht gewölbt,
+    # rechte Seite oben gerade, unten eingeschnürt, Unterkante fällt nach links ab
+    tie += (f'<path fill="{RED}" d="M{KNOT_X},528Q240,524 257,526C256.5,538 253,549 252.5,553'
+            f'Q254,557 254,561Q238,561 {KNOT_X},564Z"/>')
     # unterer Teil
-    lo0, lo1 = (254, TIE[1]), (323, 800)
-    lower = f'<path fill="{RED}" d="M100,{TIE[1]}H{lo0[0]}{c(lo0, lo1, LOW_R, log, "unten Kante")}H100Z"/>'
-    for name, l, r, a0, a1, b0, b1 in (('unten A', LA_L, LA_R, (200, TIE[1]), (226, 720), (212, TIE[1]), (238, 720)),
-                                       ('unten B', LB_L, LB_R, (229, TIE[1]), (272, 790), (242, TIE[1]), (286, 790))):
+    lo0, lo1 = (254, TIE[1] - 5), (323, 800)
+    lower = f'<path fill="{RED}" d="M100,{lo0[1]}H{lo0[0]}{c(lo0, lo1, LOW_R, log, "unten Kante")}H100Z"/>'
+    for name, l, r, a0, a1, b0, b1 in (('unten A', LA_L, LA_R, (199, TIE[1] - 6), (226, 720), (211, TIE[1] - 6), (238, 720)),
+                                       ('unten B', LB_L, LB_R, (228, TIE[1] - 6), (272, 790), (241, TIE[1] - 6), (286, 790))):
         lower += f'<path fill="{FOLD}" d="M{a0[0]},{a0[1]}{c(a0, a1, l, log, name + " links")}' \
                  f'L{b1[0]},{b1[1]}{c(b1, b0, r[::-1], log, name + " rechts")}Z"/>'
-    side = upper + band + folds + tie + lower
+    side = upper + band + folds + lower + tie
     return val + swag1 + swag2, side, log
 
 

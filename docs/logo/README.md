@@ -153,7 +153,7 @@ Aufbau von unten nach oben, alles im 1024er-Raster (R = 456, Mitte 512|512):
 | Bühne (weiß) | Kreis 0,750 R, zugleich Clip für Boden und Vorhang |
 | Boden | konstruiert: Bühnenkante y = 676–698 `#171717`, Fläche `#C07A30`, Dielenfugen 8 px im gleichmäßigen Abstand 36 px (`#4A2E12`) |
 | Schabracke | 3 Pfade, symmetrisch: Fläche mit Unterkante + 2 Faltenbänder (Sicheln) |
-| Seitenvorhang | 9 Pfade, linke Hälfte, per `<use>` an x = 512 gespiegelt: oberer Teil, Saum, 2 Falten, Raffhalter (2 Rechtecke), unterer Teil, 2 Falten unten |
+| Seitenvorhang | linke Hälfte, per `<use>` an x = 512 gespiegelt: Silhouette dunkel (eine Außenkante), helle Fläche bis zur linken Saumkante, 2 Falten, unterer Teil mit 2 Falten, Raffhalter-Band, Knoten |
 | Rahmen | Kreisring 0,750–0,794 R |
 | Katze | Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`) |
 
@@ -163,7 +163,9 @@ Vorhang mit einfachen Mitteln (2026-10-25): Die erste Fassung war Pixel-Nachzeic
 - `konzept/rohfassung/abgleich-vorhang.png`: Original | Rohfassung mit Original-Kanten (cyan) | Abweichungen schwarz.
 
 Offen für den Feinschliff:
-- Raffhalter: jetzt zwei schlichte Rechtecke. Im Original ist der Übergang zu den Falten weich.
+- ~~Raffhalter als Rechtecke~~ (2026-10-25): Das Band hat jetzt eine nach rechts abfallende Oberkante, auf der die Falten gestaffelt enden, und eine fast waagerechte Unterkante, aus der die unteren Falten auffächern. Der Knoten hat eine leicht gewölbte Oberkante, eine unten eingeschnürte rechte Seite und eine nach links abfallende Unterkante. Er ist von Hand gezeichnet, weil die Anpassung bei vier Messpunkten entgleist ist (Kontrollpunkt bei y = 444 → senkrechter Strich über dem Knoten).
+- Übergänge: Saum und helle Fläche teilten sich eine Kante, das ergab eine helle Antialiasing-Naht. Jetzt wird die Silhouette dunkel angelegt und die helle Fläche liegt darüber (wie im Grafikprogramm). Faltenenden laufen unter das Band, die unteren Falten beginnen im Band.
+- Offen zur Positionierung: Der Raffhalter liegt bei y = 513–565 (Mitte ≈ 539), die waagerechte Ringfuge bei y ≈ 521. Prüfen, ob beide aufeinander ausgerichtet werden sollen. Ebenso, ob Faltenspitzen, Knoten und Bühnenkante auf gemeinsamen Linien liegen sollen.
 - Dielenfarbe `#4A2E12` ist geschätzt.
 - Prüfen, ob Faltenspitzen und Saum noch stärker vereinfacht werden sollen (z. B. gleiche Krümmung für alle Falten).
 
