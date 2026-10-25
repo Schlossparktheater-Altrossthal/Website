@@ -37,19 +37,20 @@ TAIL_OUTLINE = (HIP + 'C637.5,690 620,699 601,701C585,702.5 562,704.5 544,711.5'
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
 body = re.findall(r'<path d="([^"]*)"', cat)[0]   # nur der Körper, der Schwanz wird neu konstruiert
-# Ohren (2026-10-25, nach Vorlage des Users): Kopf als Kuppel bis zum vorderen Ohr, vorderes Ohr mit runder Spitze
-# und fast gerader Rückseite; hinteres Ohr als eigene Fläche, durch einen gleichmäßig schmalen weißen Spalt
-# (~1,5 px) von Kuppel und vorderem Ohr getrennt, links offen.
-a, b = body.index('C455.7,449.2'), body.index('C503.1,440.8')
-EARS = ('C455,447 459,440.8 463,438.7C466,437.3 469.3,435.9 472,434.7'   # Stirn → Kuppel bis zum vorderen Ohr
-        'C473.9,431 474.9,427.5 475.5,424.5C476.1,421.5 476.7,418.8 477.6,416.9'   # Vorderkante
-        'C478.3,415.6 479.8,415.3 481,416.2'            # runde Spitze
-        'C486.5,420.8 494,431 499,437.5')                 # Rückseite fast gerade in den Nacken
+# Kopf + Ohren (2026-10-25, nach Vorlage des Users = dieselbe Silhouette wie das Original): Kurven per Least-Squares
+# auf die Kontur der Vorlage gefittet (≤0,7 px), von der Stirn (452,5|453) bis zum Nackenknick (514|442,5).
+a, b = body.index('C455.7,449.2'), body.index('C518.6,445.2')
+DOME = [(452.5, 453), (461.2, 446.0), (469.2, 442.1), (479.8, 439.4)]   # Kopfkuppel bis zum vorderen Ohr (Knick)
+FRONT = [(479.8, 439.4), (483.2, 433.4), (483.4, 416.0), (489.3, 415.6)]   # Vorderkante vorderes Ohr bis zur Spitze
+BACK = [(489.3, 415.6), (497.5, 415.2), (507.7, 435.1), (514.0, 442.5)]   # Rückseite bis in den Nacken
+f = lambda q: f'{q[0]:.2f},{q[1]:.2f}'
+cub = lambda P: 'C' + ' '.join(f(q) for q in P[1:])
+EARS = cub(DOME) + cub(FRONT) + cub(BACK)
 body = body[:a] + EARS + body[b:]
 # Hinteres Ohr: Unter- und Vorderkante sind die um GAP versetzten Kopfkurven (Kuppel + Vorderkante vorderes Ohr),
 # damit der Spalt überall gleich breit ist. Versatz je Bézier nach Tiller-Hanson (Kontrollpolygon parallel verschoben),
 # am Knick Kuppel/vorderes Ohr spitz wie in der Vorlage.
-GAP = 1.5
+GAP = 1.9   # wie in der Vorlage
 def _split(P, t):
     lerp = lambda a, b: (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
     a, b, c = lerp(P[0], P[1]), lerp(P[1], P[2]), lerp(P[2], P[3]); d, e = lerp(a, b), lerp(b, c); f = lerp(d, e)
@@ -62,18 +63,14 @@ def _offset(P, g):
         k = 1 + n0[0] * n1[0] + n0[1] * n1[1]; return ((n0[0] + n1[0]) / k, (n0[1] + n1[1]) / k)
     m = [n[0], mid(n[0], n[1]), mid(n[1], n[2]), n[2]]
     return [(P[k][0] + g * m[k][0], P[k][1] + g * m[k][1]) for k in range(4)]
-DOME0 = [(452.5, 453), (455, 447), (459, 440.8), (463, 438.7)]
-DOME1 = [(463, 438.7), (466, 437.3), (469.3, 435.9), (472, 434.7)]
-FRONT = [(472, 434.7), (473.9, 431), (474.9, 427.5), (475.5, 424.5)]
-o0 = _offset(_split(DOME0, 0.8)[1], GAP); o1 = _offset(DOME1, GAP); o2 = _offset(_split(FRONT, 0.42)[0], GAP)
+o1 = _offset(_split(DOME, 0.47)[1], GAP); o2 = _offset(_split(FRONT, 0.2)[0], GAP)
 # Knick: die beiden versetzten Kurven auf den Schnittpunkt ihrer Endtangenten verlängern
 (ax, ay), (bx, by) = o1[3], o2[0]; ux, uy = o1[3][0] - o1[2][0], o1[3][1] - o1[2][1]; vx, vy = o2[1][0] - o2[0][0], o2[1][1] - o2[0][1]
 t = ((bx - ax) * vy - (by - ay) * vx) / (ux * vy - uy * vx); K = (ax + ux * t, ay + uy * t)
 o1[3] = o2[0] = K
-f = lambda q: f'{q[0]:.2f},{q[1]:.2f}'
-BACK_EAR = ('M' + f(o0[0]) + ''.join('C' + ' '.join(f(q) for q in o[1:]) for o in (o0, o1, o2))
-            + 'C467.5,426.2 462.5,421.8 458.6,419.4C457.4,418.7 456.3,419.2 456.4,420.6'   # Oberkante, runde Spitze
-            + 'C457.2,427 458.4,433 ' + f(o0[0]) + 'Z')                                     # Hinterkante
+BACK_EAR = ('M' + f(o1[0]) + cub(o1) + cub(o2)
+            + 'C476.9,431.5 461.8,418.5 458.6,421.0'   # Oberkante bis zur Spitze (Fit auf Vorlage)
+            + 'C458.8,428.4 462.3,435.8 ' + f(o1[0]) + 'Z')   # Hinterkante
 # Körper ab der Pfote (509|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, über die Saumspitze zurück zur Pfote
 start, hip = body.index('C508.3,673.5'), body.index('C622.9,651.9')
 CAT = 'M509,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z' + BACK_EAR
