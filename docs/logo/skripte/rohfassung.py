@@ -22,8 +22,8 @@ PLANK_W, PLANK_PITCH, PLANKS = 11, 36, 3     # Fugen 11 px, gleichmäßig (Origi
 # Fläche aus 8 Bézierkurven. Rechts bildet sie die Hüftwölbung = Schwanzansatz: weicher Bogen von (624|647)
 # nach außen bis (638|674) auf die Bühnenkante (gemessen). Auf Schwarz trennt ihn ein weißer Saum (nur Oberkante) vom Körper.
 TAIL_UPPER = 'M608,669.5C595,677 570,683 546,685C530,688 518,700 517,715'
-# weißer Saum als Sichel: läuft rechts spitz aus, links breit (4 px), endet unten an der Bodenfläche
-TAIL_SAUM = (TAIL_UPPER + 'L511.5,715C512.5,696 526.5,682.5 545,680C569,677.5 594,672.5 608,669.5Z')
+# weißer Saum als Sichel: rechts spitz, Mitte ~5 px, läuft über die Bühnenkante hinaus und endet spitz an der Locke (517|707)
+TAIL_SAUM = (TAIL_UPPER + 'L517.4,707C514,696 526.5,682.5 545,680C569,677.5 594,672.5 608,669.5Z')
 TAIL = (TAIL_UPPER.replace('M608,669.5', 'M624,646L608,669.5') +
         'C516,730 527,737 537,736.5C549,736 557,731 557,724C557,720 549,714 544,711.5'
         'C560,709 590,708 606,704C617,701 625,696 630,688L637.5,674C637.5,664 629,652 624,648Z')
@@ -50,7 +50,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 </g>
 <circle id="rahmen" cx="{C}" cy="{C}" r="{(F_IN + F_OUT) / 2:.1f}" fill="none" stroke="{BLACK}" stroke-width="{F_OUT - F_IN:.1f}"/>
 <g id="katze" fill="{BLACK}">{cat}
-  <path d="{TAIL_SAUM}" fill="#fff" clip-path="url(#ueber-kante)"/>
+  <path d="{TAIL_SAUM}" fill="#fff"/>
   <path d="{TAIL}"/></g>
 </svg>'''
 open(os.path.join(OUT, 'logo-roh.svg'), 'w').write(svg)
