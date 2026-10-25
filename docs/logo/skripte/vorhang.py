@@ -58,11 +58,15 @@ SWAG2_BOT = xy({416: 274, 424: 282, 432: 289, 440: 295, 448: 300, 456: 305, 464:
 INNER = yx({510: 276, 220: 413, 240: 411, 260: 408, 280: 404, 300: 398, 320: 393, 340: 387, 360: 380, 380: 371, 400: 362,
             420: 351, 440: 338, 460: 324, 480: 307, 500: 287, 520: 263})
 BAND_L = yx({250: 403, 280: 393, 300: 386, 320: 378, 340: 369, 360: 360, 380: 350, 400: 338, 420: 325, 440: 311,
-             460: 295, 480: 276, 500: 254})
-F2_L = yx({320: 324, 340: 317, 360: 309, 380: 300, 400: 291, 420: 280, 440: 268, 460: 255, 480: 241, 500: 225})
-F2_R = yx({320: 331, 340: 327, 360: 322, 380: 315, 400: 307, 420: 297, 440: 287, 460: 275, 480: 260, 500: 241})
-F3_L = yx({340: 270, 360: 263, 380: 256, 400: 248, 420: 239, 440: 230, 460: 220, 480: 210, 500: 201})
-F3_R = yx({340: 273, 360: 269, 380: 264, 400: 259, 420: 252, 440: 244, 460: 235, 480: 224, 500: 209})
+             460: 295, 480: 276, 500: 253.5, 510: 240.8, 516: 232.5, 520: 226.5, 522: 223.4})
+F2_L = yx({320: 324, 340: 317, 360: 309, 380: 300, 400: 291, 420: 280, 440: 268, 460: 255, 480: 240.5, 500: 224.9,
+            510: 217.4, 516: 212.5, 520: 209.3})
+F2_R = yx({320: 331, 340: 327, 360: 322, 380: 315, 400: 307, 420: 297, 440: 287, 460: 275, 480: 260.3, 500: 241.5,
+            510: 230.5, 516: 223.3, 520: 218.4})
+F3_L = yx({340: 270, 360: 263, 380: 256, 400: 248, 420: 239, 440: 230, 460: 220, 480: 209.7, 500: 200.2,
+            510: 194.8, 514: 192.5})
+F3_R = yx({340: 273, 360: 269, 380: 264, 400: 259, 420: 252, 440: 244, 460: 235, 480: 224.6, 500: 209.5,
+            510: 200.5, 514: 196.8})
 LOW_R = yx({570: 257, 600: 267, 620: 274, 640: 282, 660: 288, 680: 295, 700: 302, 720: 308, 740: 313, 760: 318, 780: 321})
 LA_L = yx({570: 201, 600: 207, 640: 214, 680: 218}); LA_R = yx({570: 213, 600: 218, 640: 224, 680: 227})
 LB_L = yx({570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({570: 243, 600: 251, 640: 260, 680: 268, 720: 275})
@@ -70,11 +74,13 @@ LB_L = yx({570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({570: 2
 TIE = (522, 566)                            # Falten oben laufen bis unter das Band, unten beginnen sie darin
 # Raffhalter (gemessen bei 8-facher Vergrößerung, beide Seiten verglichen):
 # Band-Oberkante: Bogen, auf dem die oberen Bahnen schräg enden; fällt nach rechts zum Knoten ab
-BAND_TOP = xy({170: 514, 180: 515.5, 190: 517, 205: 521, 218: 524, 228: 526})
+# gemessen subpixelgenau (Hell/Dunkel-Übergang im Grünkanal); die mittlere Bahn endet NICHT am Band,
+# sondern läuft zwischen Falte A und Saum zu einer Spitze bei (215 | 524) zusammen
+BAND_TOP = xy({171: 513, 184: 516, 193: 518, 201: 520, 209: 521.5, 215: 523.5})
 # Band-Unterkante: hängt leicht durch, schneidet die unteren Bahnen schräg an
-BAND_BOT = xy({215: 566, 200: 566, 185: 564.5, 173: 563})
+BAND_BOT = xy({225: 566.5, 215: 566, 200: 566, 185: 564.5, 173: 563})
 # Knoten (helle Schlaufe vorn): Ecken leicht gerundet
-KNOT = dict(tl=(223.5, 527.5), tr=(256, 526.5), br=(252.5, 556.5), bl=(223.5, 564), r=2)
+KNOT = dict(tl=(223.5, 527.5), tr=(256, 526.5), br=(252.5, 556.5), bl=(223.5, 564), r=1)
 
 
 def c(p0, p3, pts, log, name):
@@ -101,19 +107,19 @@ def build(RED, FOLD):
     # Seitenvorhang links oben: außen nur Gerade, der Bühnenkreis schneidet ab
     # Silhouette dunkel (eine einzige Außenkante), helle Fläche darüber endet an der linken Saumkante
     tip, end = (418, TOP), (257.5, 527)
-    btip, bend = (416, 200), (222, TIE[0] + 8)
+    btip, bend = (416, 200), (217.2, 526)
     upper = f'<path fill="{FOLD}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}L256,532H100Z"/>'
     band = f'<path fill="{RED}" d="M100,{TOP}H{btip[0]}V{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
     folds = ''
-    for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (203, TIE[0] + 8), (212, TIE[0] + 8)),
-                                   ('Falte B', (277, 316), F3_L, F3_R, (184, TIE[0] + 8), (194, TIE[0] + 8))):
+    for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (204.5, 526), (211, 526)),
+                                   ('Falte B', (277, 316), F3_L, F3_R, (185.6, 526), (185.7, 526))):
         folds += f'<path fill="{FOLD}" d="M{tp[0]},{tp[1]}{c(tp, e2, r, log, name + " rechts")}' \
                  f'L{e1[0]},{e1[1]}{c(e1, tp, l[::-1], log, name + " links")}Z"/>'
     # Raffhalter
     # Band: Oberkante als ein Bogen bis unter den Knoten, rechts verdeckt der Knoten, Unterkante durchhängend
-    b0, b1, bl = (150, 511), (232, 527), KNOT['bl']
+    b0, b1, bl = (150, 508), (222, 525.5), KNOT['bl']
     tie = (f'<path fill="{FOLD}" d="M{b0[0]},{b0[1]}{c(b0, b1, BAND_TOP, log, "Band oben")}'
-           f'L240,527L240,560L{bl[0]},{bl[1]}{c(bl, (150, 562), BAND_BOT, log, "Band unten")}Z"/>')
+           f'L240,527L240,556L233,566.5{c((233, 566.5), (150, 562), BAND_BOT, log, "Band unten")}Z"/>')
     tie += knot(RED)
     # unterer Teil
     lo0, lo1 = KNOT['br'], (323, 800)
@@ -132,11 +138,11 @@ def _rev_sym(p0, pts, log, name):
 
 
 def knot(fill):
-    """Knoten: Oberkante gerade, rechte Seite leicht nach innen gezogen bis zur Einschnürung,
-    Unterkante als flacher Bogen, linke Kante gerade; Ecken mit Radius r gerundet."""
+    """Knoten: Oberkante hängt ~1,5 px durch, Ecke oben links leicht gerundet (r), oben rechts spitz
+    (stößt dort an die Vorhang-Innenkante), rechte Seite leicht eingezogen bis zur Einschnürung,
+    Unterkante gerade, Ecke unten links leicht gerundet."""
     tl, tr, br, bl, r = KNOT['tl'], KNOT['tr'], KNOT['br'], KNOT['bl'], KNOT['r']
     return (f'<path fill="{fill}" d="M{tl[0]},{tl[1] + r}Q{tl[0]},{tl[1]} {tl[0] + r},{tl[1]}'
-            f'L{tr[0] - r},{tr[1]}Q{tr[0]},{tr[1]} {tr[0]},{tr[1] + r}'
+            f'Q{(tl[0] + tr[0]) / 2},{(tl[1] + tr[1]) / 2 + 3} {tr[0]},{tr[1]}'
             f'C{tr[0]},{tr[1] + 12} {br[0] + 2.5},{br[1] - 8} {br[0]},{br[1]}'
-            f'Q{(br[0] + bl[0]) / 2},{(br[1] + bl[1]) / 2 + 1} {bl[0] + r},{bl[1]}'
-            f'Q{bl[0]},{bl[1]} {bl[0]},{bl[1] - r}Z"/>')
+            f'L{bl[0] + r},{bl[1]}Q{bl[0]},{bl[1]} {bl[0]},{bl[1] - r}Z"/>')
