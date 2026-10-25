@@ -69,7 +69,7 @@ F3_R = yx({340: 273, 360: 269, 380: 264, 400: 259, 420: 252, 440: 244, 460: 235,
             510: 200.5, 514: 196.8})
 LOW_R = yx({570: 257, 600: 267, 620: 274, 640: 282, 660: 288, 680: 295, 700: 302, 720: 308, 740: 313, 760: 318, 780: 321})
 LA_L = yx({570: 201, 600: 207, 640: 214, 680: 218}); LA_R = yx({570: 213, 600: 218, 640: 224, 680: 227})
-LB_L = yx({570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({570: 243, 600: 251, 640: 260, 680: 268, 720: 275})
+LB_L = yx({564: 228, 570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({561: 242, 570: 243, 600: 251, 640: 260, 680: 268, 720: 275})
 
 TIE = (522, 566)                            # Falten oben laufen bis unter das Band, unten beginnen sie darin
 # Raffhalter (gemessen bei 8-facher Vergrößerung, beide Seiten verglichen):
@@ -77,8 +77,9 @@ TIE = (522, 566)                            # Falten oben laufen bis unter das B
 # gemessen subpixelgenau (Hell/Dunkel-Übergang im Grünkanal); die mittlere Bahn endet NICHT am Band,
 # sondern läuft zwischen Falte A und Saum zu einer Spitze bei (215 | 524) zusammen
 BAND_TOP = xy({171: 513, 184: 516, 193: 518, 201: 520, 209: 521.5, 215: 523.5})
-# Band-Unterkante: hängt leicht durch, schneidet die unteren Bahnen schräg an
-BAND_BOT = xy({225: 566.5, 215: 566, 200: 566, 185: 564.5, 173: 563})
+# Band-Unterkante: hängt leicht durch, schneidet die unteren Bahnen schräg an; ab x = 213 steigt sie als
+# Oberkante der hellen Bahn unter dem Knoten schräg zur unteren linken Knotenecke an (kein dunkler Streifen)
+BAND_BOT = xy({200: 565.5, 185: 564, 174: 562.8})
 # Knoten (helle Schlaufe vorn): Ecken leicht gerundet
 KNOT = dict(tl=(223.5, 527.5), tr=(256, 526.5), br=(252.5, 556.5), bl=(223.5, 564), r=1)
 
@@ -119,13 +120,13 @@ def build(RED, FOLD):
     # Band: Oberkante als ein Bogen bis unter den Knoten, rechts verdeckt der Knoten, Unterkante durchhängend
     b0, b1, bl = (150, 508), (222, 525.5), KNOT['bl']
     tie = (f'<path fill="{FOLD}" d="M{b0[0]},{b0[1]}{c(b0, b1, BAND_TOP, log, "Band oben")}'
-           f'L240,527L240,556L233,566.5{c((233, 566.5), (150, 562), BAND_BOT, log, "Band unten")}Z"/>')
+           f'L240,527L240,556L225,563.5L213,566.5{c((213, 566.5), (150, 561.5), BAND_BOT, log, "Band unten")}Z"/>')
     tie += knot(RED)
     # unterer Teil
     lo0, lo1 = KNOT['br'], (323, 800)
     lower = f'<path fill="{RED}" d="M100,540H246L{lo0[0]},{lo0[1]}{c(lo0, lo1, LOW_R, log, "unten Kante")}H100Z"/>'
     for name, l, r, a0, a1, b0, b1 in (('unten A', LA_L, LA_R, (197, 545), (226, 720), (209, 545), (238, 720)),
-                                       ('unten B', LB_L, LB_R, (229, 545), (272, 790), (242, 545), (286, 790))):
+                                       ('unten B', LB_L, LB_R, (223.3, 545), (272, 790), (237.8, 545), (286, 790))):
         lower += f'<path fill="{FOLD}" d="M{a0[0]},{a0[1]}{c(a0, a1, l, log, name + " links")}' \
                  f'L{b1[0]},{b1[1]}{c(b1, b0, r[::-1], log, name + " rechts")}Z"/>'
     side = upper + band + folds + lower + tie
@@ -140,9 +141,9 @@ def _rev_sym(p0, pts, log, name):
 def knot(fill):
     """Knoten: Oberkante hängt ~1,5 px durch, Ecke oben links leicht gerundet (r), oben rechts spitz
     (stößt dort an die Vorhang-Innenkante), rechte Seite leicht eingezogen bis zur Einschnürung,
-    Unterkante gerade, Ecke unten links leicht gerundet."""
+    Unterkante hängt ~1 px durch, Ecke unten links leicht gerundet."""
     tl, tr, br, bl, r = KNOT['tl'], KNOT['tr'], KNOT['br'], KNOT['bl'], KNOT['r']
     return (f'<path fill="{fill}" d="M{tl[0]},{tl[1] + r}Q{tl[0]},{tl[1]} {tl[0] + r},{tl[1]}'
             f'Q{(tl[0] + tr[0]) / 2},{(tl[1] + tr[1]) / 2 + 3} {tr[0]},{tr[1]}'
             f'C{tr[0]},{tr[1] + 12} {br[0] + 2.5},{br[1] - 8} {br[0]},{br[1]}'
-            f'L{bl[0] + r},{bl[1]}Q{bl[0]},{bl[1]} {bl[0]},{bl[1] - r}Z"/>')
+            f'Q{(br[0] + bl[0]) / 2},{(br[1] + bl[1]) / 2 + 2} {bl[0] + r},{bl[1]}Q{bl[0]},{bl[1]} {bl[0]},{bl[1] - r}Z"/>')
