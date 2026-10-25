@@ -61,7 +61,7 @@ Weitere Farben im Logo (gemessen): Vorhang `#E84820`, Falten `#A00A0A`, Boden `#
 3. Vorhang: eine Hälfte zeichnen und spiegeln oder Handzeichnungs-Charakter behalten?
 4. Katze: Position und Silhouette übernehmen oder auf die Achse setzen?
 5. Varianten: einfarbig/negativ, Favicon ohne Dielen und Falten?
-6. Nutzung des BSZ-Rings (eingetragene Marke) mit dem BSZ abstimmen, falls nicht schon geschehen.
+6. ~~Nutzung des BSZ-Rings mit dem BSZ abstimmen~~ – erledigt, ist abgestimmt (2026-10-25).
 
 ## Nächste Schritte
 
