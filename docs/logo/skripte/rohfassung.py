@@ -5,7 +5,7 @@ Vorhang: aus wenigen Bézierkurven konstruiert (vorhang.py), Seitenvorhang an x 
 Bühnenboden: konstruiert, Bühnenkante + gleichmäßige Dielen.
 Katze: eine Kontur aus Körper Stufe 1 (konzept/katze/stufe-1-nachgezeichnet.svg) und konstruiertem Schwanz.
 """
-import os, re
+import math, os, re
 import ring_geometry as rg
 import vorhang
 
@@ -46,8 +46,34 @@ EARS = ('C455,447 459,440.8 463,438.7C466,437.3 469.3,435.9 472,434.7'   # Stirn
         'C478.3,415.6 479.8,415.3 481,416.2'            # runde Spitze
         'C486.5,420.8 494,431 499,437.5')                 # Rückseite fast gerade in den Nacken
 body = body[:a] + EARS + body[b:]
-BACK_EAR = ('M460.6,438.4C464.2,437 468,435.1 471.6,433.3L472.4,430.6'   # Unterkante parallel zur Kuppel
-            'C467.5,426.2 462.5,421.8 458.6,419.4C457.4,418.7 456.3,419.2 456.4,420.6C457.2,427 458.6,433.4 460.6,438.4Z')
+# Hinteres Ohr: Unter- und Vorderkante sind die um GAP versetzten Kopfkurven (Kuppel + Vorderkante vorderes Ohr),
+# damit der Spalt überall gleich breit ist. Versatz je Bézier nach Tiller-Hanson (Kontrollpolygon parallel verschoben),
+# am Knick Kuppel/vorderes Ohr spitz wie in der Vorlage.
+GAP = 1.5
+def _split(P, t):
+    lerp = lambda a, b: (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+    a, b, c = lerp(P[0], P[1]), lerp(P[1], P[2]), lerp(P[2], P[3]); d, e = lerp(a, b), lerp(b, c); f = lerp(d, e)
+    return [P[0], a, d, f], [f, e, c, P[3]]
+def _normal(a, b):   # links der Laufrichtung = außen (Kontur läuft hier im Uhrzeigersinn)
+    dx, dy = b[0] - a[0], b[1] - a[1]; l = math.hypot(dx, dy); return (dy / l, -dx / l)
+def _offset(P, g):
+    n = [_normal(P[k], P[k + 1]) for k in range(3)]
+    def mid(n0, n1):
+        k = 1 + n0[0] * n1[0] + n0[1] * n1[1]; return ((n0[0] + n1[0]) / k, (n0[1] + n1[1]) / k)
+    m = [n[0], mid(n[0], n[1]), mid(n[1], n[2]), n[2]]
+    return [(P[k][0] + g * m[k][0], P[k][1] + g * m[k][1]) for k in range(4)]
+DOME0 = [(452.5, 453), (455, 447), (459, 440.8), (463, 438.7)]
+DOME1 = [(463, 438.7), (466, 437.3), (469.3, 435.9), (472, 434.7)]
+FRONT = [(472, 434.7), (473.9, 431), (474.9, 427.5), (475.5, 424.5)]
+o0 = _offset(_split(DOME0, 0.8)[1], GAP); o1 = _offset(DOME1, GAP); o2 = _offset(_split(FRONT, 0.42)[0], GAP)
+# Knick: die beiden versetzten Kurven auf den Schnittpunkt ihrer Endtangenten verlängern
+(ax, ay), (bx, by) = o1[3], o2[0]; ux, uy = o1[3][0] - o1[2][0], o1[3][1] - o1[2][1]; vx, vy = o2[1][0] - o2[0][0], o2[1][1] - o2[0][1]
+t = ((bx - ax) * vy - (by - ay) * vx) / (ux * vy - uy * vx); K = (ax + ux * t, ay + uy * t)
+o1[3] = o2[0] = K
+f = lambda q: f'{q[0]:.2f},{q[1]:.2f}'
+BACK_EAR = ('M' + f(o0[0]) + ''.join('C' + ' '.join(f(q) for q in o[1:]) for o in (o0, o1, o2))
+            + 'C467.5,426.2 462.5,421.8 458.6,419.4C457.4,418.7 456.3,419.2 456.4,420.6'   # Oberkante, runde Spitze
+            + 'C457.2,427 458.4,433 ' + f(o0[0]) + 'Z')                                     # Hinterkante
 # Körper ab der Pfote (509|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, über die Saumspitze zurück zur Pfote
 start, hip = body.index('C508.3,673.5'), body.index('C622.9,651.9')
 CAT = 'M509,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z' + BACK_EAR
