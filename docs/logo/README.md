@@ -99,6 +99,8 @@ Stufen (`konzept/katze/`):
 | 1 nachgezeichnet | wie im Logo, geglättet |
 | 2 reduziert | Spalt gefüllt, ein Ohr, Pfoten verschmolzen, Schwanz dicker |
 | 3 geometrisch | glatte Profil-Silhouette, große Ohren, Schwanz vorn mit Lücke (wie der Glanzstrich im Original) |
+| 3a Symbol Haken | eigenständiges Symbol auf 24er-Raster, Schwanz hinten als Haken |
+| 3b Symbol vorn | eigenständiges Symbol auf 24er-Raster, Schwanz vorn um die Pfoten (näher am Original) |
 | 4 Kopf | nur Kopf mit Ohren |
 
 Ergebnis des Größentests (`groessentest.png`):
@@ -123,7 +125,14 @@ Schwanzansatz (2026-10-25 korrigiert): Im Original wächst der Schwanz unten rec
 - Die Kurvenglättung (Catmull-Rom) begrenzt die Tangentenlänge auf ⅓ der Segmentlänge, sonst entstehen an langen Geraden Dorne.
 - In kleinen Größen (≤ 32 px) wird die Lücke bei Stufe 3 zu einem hellen Strich. Für Favicon/Statusleiste sollte sie entfallen.
 
-Offen: Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
+Symbol-Varianten 3a/3b (2026-10-25, Entscheidung: Stufe 3 darf eigenständig und symbolhaft sein):
+- Gezeichnet auf einem 24er-Raster wie Material-/Android-Icons. Formen ≥ 1,5–2 Einheiten, Ohren mit klarer Kerbe, Profil-Schnauze nach links, eindeutiger Schwanz.
+- Beide sind ab 16 px als Katze erkennbar, auf Weiß und als weiße Silhouette.
+- 3a: Der Schwanz-Haken bleibt bis 16 px klar getrennt, die Silhouette ist am stärksten.
+- 3b: näher am Logo (Schwanz vorn). Bei 16 px verschmilzt der Schwanz aber mit dem Sockel.
+- Im Größentest sitzen 3a/3b in den Kreisen etwas tief und links, weil die Platzierung noch für die hohen Stufen 1–3 eingestellt ist. Beim Ausarbeiten optisch zentrieren.
+
+Offen (ältere Notiz zu Stufe 3): Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
 
 ## Nächste Schritte
 

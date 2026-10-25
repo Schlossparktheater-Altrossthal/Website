@@ -9,7 +9,7 @@ import ring_geometry as g
 
 here = os.path.dirname(__file__)
 K = os.path.join(here, '..', 'konzept', 'katze')
-LEVELS = ['stufe-1-nachgezeichnet', 'stufe-2-reduziert', 'stufe-3-geometrisch', 'stufe-4-kopf']
+LEVELS = ['stufe-1-nachgezeichnet', 'stufe-2-reduziert', 'stufe-3-geometrisch', 'stufe-3a-symbol-haken', 'stufe-3b-symbol-vorn', 'stufe-4-kopf']
 SIZES = [16, 24, 32, 48, 64]
 
 def cat(name, x, y, w, h, color):
