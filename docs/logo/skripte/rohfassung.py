@@ -14,18 +14,26 @@ OUT = os.path.join(here, '..', 'konzept', 'rohfassung'); os.makedirs(OUT, exist_
 
 C, R = 512, 456
 F_IN, F_OUT = 0.750 * R, 0.794 * R            # schwarzer Rahmen
-RED, FOLD, FLOOR, BLACK = '#E84820', '#A00A0A', '#C07A30', '#171717'
-EDGE = (676, 698)                            # Bühnenkante (gemessen 676–698)
-PLANK_W, PLANK_PITCH = 8, 36                 # Dielenfugen gleichmäßig, Original 730/765/802 ungleich
+RED, FOLD, FLOOR, JOINT, BLACK = '#E84820', '#A00A0A', '#D2924D', '#3C1B00', '#171717'   # Boden/Fuge gemessen
+EDGE = (673, 698)                            # Bühnenkante (gemessen 674–697), 1 px höher: Pfoten stehen ohne Naht darauf
+PLANK_W, PLANK_PITCH, PLANKS = 11, 36, 3     # Fugen 11 px, gleichmäßig (Original 722/760/797 ungleich), nur 3 → kein Splitter am Rahmen
+# Schwanz (gemessen 2026-10-25): wächst aus der Hüfte, läuft über die Bühnenkante nach links und wird dünner
+# (22 → 14 px), endet in einer runden Locke; von rechts greift eine Kerbe bis (544|711,5) hinein.
+# Fläche aus 8 Bézierkurven, füllt rechts die Hüftwölbung bis x ≈ 625 (in Stufe 1 ausgeschnitten). Auf Schwarz trennt ihn ein weißer Saum (nur Oberkante) vom Körper.
+TAIL_UPPER = 'M608,669.5C595,677 570,683 546,685C530,688 518,700 517,715'
+TAIL = (TAIL_UPPER.replace('M608,669.5', 'M624,646L608,669.5') +
+        'C516,730 527,737 537,736.5C549,736 557,731 557,724C557,720 549,714 544,711.5'
+        'C560,709 590,708 606,704C617,701 624,696 625.5,684C626.5,672 625,660 624,646Z')
+TAIL_GAP = 4                                 # Breite des weißen Saums
 
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
-cat = ''.join(re.findall(r'<path[^>]*/>', cat))
-planks = ''.join(f'<rect x="0" y="{y}" width="1024" height="{PLANK_W}"/>'
-                 for y in range(EDGE[1] + PLANK_PITCH - PLANK_W // 2, int(C + F_IN), PLANK_PITCH))
+cat = re.findall(r'<path[^>]*/>', cat)[0]       # nur der Körper, der Schwanz wird neu konstruiert
+planks = ''.join(f'<rect x="0" y="{EDGE[1] + 25 + i * PLANK_PITCH}" width="1024" height="{PLANK_W}"/>' for i in range(PLANKS))
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <!-- Rohfassung, erzeugt von skripte/rohfassung.py -->
 <defs>
+  <clipPath id="ueber-kante"><rect x="0" y="0" width="1024" height="{EDGE[1]}"/></clipPath>
   <clipPath id="buehne"><circle cx="{C}" cy="{C}" r="{F_IN + 1:.1f}"/></clipPath>
   <g id="seitenvorhang">{side}</g>
 </defs>
@@ -34,12 +42,15 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <circle cx="{C}" cy="{C}" r="{F_IN + 1:.1f}" fill="#fff"/>
   <g id="boden"><rect x="0" y="{EDGE[0]}" width="1024" height="400" fill="{FLOOR}"/>
     <rect x="0" y="{EDGE[0]}" width="1024" height="{EDGE[1] - EDGE[0]}" fill="{BLACK}"/>
-    <g fill="#4A2E12">{planks}</g></g>
+    <g fill="{JOINT}">{planks}</g></g>
   <g id="schabracke">{valance}</g>
   <use href="#seitenvorhang"/><use href="#seitenvorhang" transform="matrix(-1 0 0 1 1024 0)"/>
+  <path fill="{BLACK}" d="M0,0H1024V{vorhang.TOP + 418 * 0.34:.1f}L606,{vorhang.TOP + 0.5}H418L0,{vorhang.TOP + 418 * 0.34:.1f}Z"/>  <!-- oberhalb des Vorhangs schwarz wie im Original -->
 </g>
 <circle id="rahmen" cx="{C}" cy="{C}" r="{(F_IN + F_OUT) / 2:.1f}" fill="none" stroke="{BLACK}" stroke-width="{F_OUT - F_IN:.1f}"/>
-<g id="katze" fill="{BLACK}">{cat}</g>
+<g id="katze" fill="{BLACK}">{cat}
+  <path d="{TAIL_UPPER}" fill="none" stroke="#fff" stroke-width="{2 * TAIL_GAP}" stroke-linecap="round" clip-path="url(#ueber-kante)"/>
+  <path d="{TAIL}"/></g>
 </svg>'''
 open(os.path.join(OUT, 'logo-roh.svg'), 'w').write(svg)
 for name, err in log:

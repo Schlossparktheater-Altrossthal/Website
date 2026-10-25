@@ -151,16 +151,19 @@ Aufbau von unten nach oben, alles im 1024er-Raster (R = 456, Mitte 512|512):
 |---|---|
 | Ring | `ring_geometry.svg_paths` (BSZ-Maße und -Farben) |
 | Bühne (weiß) | Kreis 0,750 R, zugleich Clip für Boden und Vorhang |
-| Boden | konstruiert: Bühnenkante y = 676–698 `#171717`, Fläche `#C07A30`, Dielenfugen 8 px im gleichmäßigen Abstand 36 px (`#4A2E12`) |
+| Boden | konstruiert: Bühnenkante y = 673–698 `#171717` (gemessen 674–697, 1 px höher, damit die Pfoten ohne Naht aufstehen), Fläche `#D2924D`, 3 Fugen à 11 px im Abstand 36 px (`#3C1B00`, Farben gemessen). Im Original ungleich (722/760/797); nur 3 Fugen, damit am Rahmen kein Splitter entsteht |
 | Schabracke | 3 Pfade, symmetrisch: Fläche mit Unterkante + 2 Faltenbänder (Sicheln) |
 | Seitenvorhang | linke Hälfte, per `<use>` an x = 512 gespiegelt: Silhouette dunkel (eine Außenkante), helle Fläche bis zur linken Saumkante, 2 Falten, unterer Teil mit 2 Falten, Raffhalter-Band, Knoten |
 | Rahmen | Kreisring 0,750–0,794 R |
-| Katze | Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`) |
+| Katze | Körper Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`), Schwanz neu konstruiert (siehe unten) |
+| Oben | Fläche zwischen Rahmen und Vorhang-Oberkante schwarz; die Vorhangkante läuft außen als Schräge (Steigung 0,34, gemessen) von (418\|186) zum Rahmen |
 
 Vorhang mit einfachen Mitteln (2026-10-25): Die erste Fassung war Pixel-Nachzeichnung (wellige Kanten, viele Knoten, schlechte Deckung) und ist verworfen. Jetzt ist **jede Kante genau eine kubische Bézierkurve** mit festen Endpunkten. Außenkanten sind Geraden, die der Bühnenkreis abschneidet. Die Kontrollpunkte werden per Least-Squares an Messpunkte aus dem Original angepasst (Messpunkte stehen in `vorhang.py`).
 - Abweichung je Kurve zu den Messpunkten: höchstens 1,5 px (1024er).
 - Flächenvergleich Vorhang links (`skripte/abgleich_vorhang.py`): 6,4 % Fehlpixel, fast nur 1-px-Kantensaum des Originals.
 - `konzept/rohfassung/abgleich-vorhang.png`: Original | Rohfassung mit Original-Kanten (cyan) | Abweichungen schwarz.
+
+Schwanz (2026-10-25, `TAIL` in `rohfassung.py`): Fläche aus 8 Bézierkurven nach gemessenen Kanten. Er wächst aus der Hüfte (füllt die in Stufe 1 ausgeschnittene Hüftwölbung bis x ≈ 625), läuft über die Bühnenkante nach links, wird dünner (22 → 14 px) und endet in einer runden Locke (unten y 736, links x 517). Von rechts greift eine spitze Kerbe bis (544|711,5) hinein. Ein weißer Saum von 4 px trennt die Oberkante vom Körper, nur oberhalb der Bodenfläche. Vergleich: `abgleich-schwanz.png`, `abgleich-boden.png`, `abgleich-oben.png`.
 
 Offen für den Feinschliff:
 - Raffhalter (2026-10-25, 4. Fassung): Hell/Dunkel-Kanten subpixelgenau aus dem Grünkanal gemessen (hell G ≈ 72, dunkel G ≈ 10, Kante bei 50 %), Messpunkte bis y = 522 in `vorhang.py`.
@@ -172,7 +175,6 @@ Offen für den Feinschliff:
 - Original hat an hellen Flächen (Knoten, Bahnen) eine feine hellere Kontur von ~1 px. Ob die als Gestaltungsmittel übernommen wird, ist offen.
 - Übergänge: Saum und helle Fläche teilten sich eine Kante, das ergab eine helle Antialiasing-Naht. Jetzt wird die Silhouette dunkel angelegt und die helle Fläche liegt darüber (wie im Grafikprogramm). Faltenenden laufen unter das Band, die unteren Falten beginnen im Band.
 - Offen zur Positionierung: Der Raffhalter liegt bei y = 513–565 (Mitte ≈ 539), die waagerechte Ringfuge bei y ≈ 521. Prüfen, ob beide aufeinander ausgerichtet werden sollen. Ebenso, ob Faltenspitzen, Knoten und Bühnenkante auf gemeinsamen Linien liegen sollen.
-- Dielenfarbe `#4A2E12` ist geschätzt.
 - Prüfen, ob Faltenspitzen und Saum noch stärker vereinfacht werden sollen (z. B. gleiche Krümmung für alle Falten).
 
 ## Nächste Schritte

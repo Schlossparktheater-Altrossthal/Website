@@ -108,9 +108,11 @@ def build(RED, FOLD):
     # Seitenvorhang links oben: außen nur Gerade, der Bühnenkreis schneidet ab
     # Silhouette dunkel (eine einzige Außenkante), helle Fläche darüber endet an der linken Saumkante
     tip, end = (418, TOP), (257.5, 527)
-    btip, bend = (416, 200), (217.2, 526)
-    upper = f'<path fill="{FOLD}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}L256,532H100Z"/>'
-    band = f'<path fill="{RED}" d="M100,{TOP}H{btip[0]}V{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
+    # Oberkante außen: Schräge von der Ecke (418|186) zum Rahmen (gemessen (390|195), (410|188)), Steigung 0,34
+    btip, bend = (414, 214), (217.2, 526)
+    top_out = f'M100,{TOP + (418 - 100) * 0.34:.1f}L418,{TOP}'
+    upper = f'<path fill="{FOLD}" d="{top_out}{c(tip, end, INNER, log, "Innenkante")}L256,532H100Z"/>'
+    band = f'<path fill="{RED}" d="{top_out}H421L{btip[0]},{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
     folds = ''
     for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (204.5, 526), (211, 526)),
                                    ('Falte B', (277, 316), F3_L, F3_R, (185.6, 526), (185.7, 526))):
