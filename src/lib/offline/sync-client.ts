@@ -199,6 +199,11 @@ export class SyncClient {
     const handler = (event: MessageEvent) => {
       const { data } = event;
 
+      // Only accept messages from our own origin (service worker or same-origin window).
+      if (event.origin && event.origin !== window.location.origin) {
+        return;
+      }
+
       if (!data || typeof data !== "object") {
         return;
       }
