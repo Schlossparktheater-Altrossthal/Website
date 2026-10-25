@@ -69,7 +69,8 @@ items = {
     'stufe-3-geometrisch': ('8 0 96 126', S3, 'Icon: glatte Profil-Silhouette, große Ohren, Schwanz vorn mit Lücke wie der Glanzstrich im Original'),
     'stufe-4-kopf': ('6 2 88 98', S4, 'nur Kopf, für 16 px'),
 }
-for n, (vb, b, note) in items.items():
-    with open(os.path.join(OUT, n + '.svg'), 'w') as f:
-        f.write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" fill="currentColor"><!-- {note} -->{b}</svg>')
-    print(n)
+if __name__ == "__main__":
+    for n, (vb, b, note) in items.items():
+        with open(os.path.join(OUT, n + '.svg'), 'w') as f:
+            f.write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" fill="currentColor"><!-- {note} -->{b}</svg>')
+        print(n)

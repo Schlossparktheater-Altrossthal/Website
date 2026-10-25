@@ -3,7 +3,7 @@
 Arbeitsordner für die Überarbeitung des Logos (Vorhang mit Katze, darum der Ring).
 Ziel: saubere Konstruktion (Raster, Symmetrien, Farben) festlegen und dann final vektorisieren.
 
-Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Katzen-Vereinfachung im Test, nächster Schritt Entscheidung Katzenstufen, dann Vektor-Rohfassung.
+Stand: 2026-10-25 – Konzeptblätter fertig, Symbol 3a für kleine Größen gewählt, Vektor-Rohfassung des Gesamtlogos steht (`konzept/rohfassung/`). Nächster Schritt: Feinschliff.
 
 ## Ordner
 
@@ -24,6 +24,8 @@ Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Katzen-Vereinfachung im Test,
 | `konzept/katze/stufe-*.svg` | Katze in 4 Vereinfachungsstufen (Füllung `currentColor`) |
 | `konzept/katze/groessentest.png` | Alle Stufen in 4 Icon-Aufbauten bei 16–64 px, pixelgenau ×4 vergrößert |
 | `konzept/icons/*.svg` | Icon-Satz mit Symbol 3a: Favicon rot/blau, App-Icon (maskable), Statusleiste, Symbol schwarz |
+| `konzept/rohfassung/logo-roh.svg` | Vektor-Rohfassung des Gesamtlogos |
+| `konzept/rohfassung/abgleich.png` | Original / Rohfassung / 50:50 überblendet |
 | `skripte/` | Mess- und Erzeugungsskripte, siehe unten |
 
 ## Messergebnisse
@@ -141,10 +143,31 @@ Symbol-Varianten 3a/3b (2026-10-25, Entscheidung: Stufe 3 darf eigenständig und
 
 Offen (ältere Notiz zu Stufe 3): Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
 
+## Vektor-Rohfassung (2026-10-25, `skripte/rohfassung.py`)
+
+Aufbau von unten nach oben, alles im 1024er-Raster (R = 456, Mitte 512|512):
+
+| Ebene | Herkunft |
+|---|---|
+| Ring | `ring_geometry.svg_paths` (BSZ-Maße und -Farben) |
+| Bühne (weiß) | Kreis 0,750 R, dient zugleich als Clip für Boden und Vorhang |
+| Boden | konstruiert: Bühnenkante y = 676–698 `#171717`, Fläche `#C07A30`, Dielenfugen 8 px im gleichmäßigen Abstand 36 px (`#4A2E12`) |
+| Vorhang | linke Hälfte (x ≤ 515) aus dem Original nachgezeichnet, Vorhangrot `#E84820` und Falten `#A00A0A` als getrennte Pfade, per `<use>` an x = 512 gespiegelt. Außen bis unter den Rahmen verlängert, damit die Kante der Rahmenkreis ist |
+| Rahmen | Kreisring 0,750–0,794 R |
+| Katze | Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`) |
+
+Ergebnis (`abgleich.png`): Ring, Rahmen, Vorhang und Katze decken sich mit dem Original. Sichtbar anders sind nur der Ring (gewollt, BSZ-Maße) und die Dielen (jetzt gleichmäßig).
+
+Offen für den Feinschliff:
+- Schabracke: an der Spiegelachse x = 512 bleibt eine kleine Stufe in den Falten. Die Schabracke besser als eigene, symmetrisch konstruierte Form zeichnen.
+- Falten und Raffhalter sind noch nachgezeichnet (leicht wellige Kanten, kleine Reste am Raffhalter). Für die Endfassung von Hand mit wenigen Bézier-Kurven nachziehen.
+- Dielenfarbe `#4A2E12` ist geschätzt, im Original eher Dunkelbraun mit Verlauf.
+- Unterkante Vorhang auf dem Boden: im Original schräg, jetzt nachgezeichnet. Prüfen, ob eine klare Gerade besser wirkt.
+
 ## Nächste Schritte
 
 1. ~~Konzeptblatt 2~~ – erledigt 2026-10-25
-2. Vektor-Rohfassung: Ring und Rahmen konstruiert, Vorhang/Katze/Boden nachgezeichnet
+2. ~~Vektor-Rohfassung~~ – erledigt 2026-10-25, siehe oben
 3. Abgleich mit dem Original, Feinschliff
 4. Export: SVG (Haupt), einfarbig/negativ, Favicon, PNG-Größen; Austausch in Mitgliederbereich und Drupal-Theme
 
@@ -164,6 +187,7 @@ python -I skripte/ring_geometry.py                                       # Segme
 python -I skripte/verify_ring.py                                         # konzept/ring-bsz-abgleich.png + Deckung
 python -I skripte/sheet2.py                                              # Konzeptblatt-2-SVGs + konzept-2.html
 python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg (Stufe 1–3, 4)
+python -I skripte/rohfassung.py                                          # konzept/rohfassung/logo-roh.svg (Abgleich: abgleich.png)
 python -I skripte/icons.py                                               # konzept/icons/*.svg mit Symbol 3a
 python -I skripte/size_test.py && node skripte/size_test.cjs "$PW" && python -I skripte/size_sheet.py   # groessentest.png
 PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
