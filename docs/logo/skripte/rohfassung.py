@@ -72,3 +72,12 @@ cat_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="428 406 218 339">
 <path d="{CAT}" fill="{BLACK}"/>
 </svg>'''
 open(os.path.join(OUT, 'logo-katze.svg'), 'w').write(cat_svg)
+
+# Nur der Kopf (2026-10-25): Körperkontur vom Hals vorn (469,5|515) über Kinn, Ohren und Hinterkopf bis zum
+# Nacken (514|442,5), unten ein leicht gewölbter Halsabschluss. viewBox = Umriss + 8 px Rand.
+a, b = body.index('C470.0,513.1'), body.index('C518.6,445.2')
+HEAD = 'M469.5,515.0' + body[a:b] + 'C527,450 514,506 469.5,515.0Z'   # tangential aus dem Nacken, runder Abschluss
+open(os.path.join(OUT, 'logo-katze-kopf.svg'), 'w').write(f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="428 406 107 117">
+<!-- Katzenkopf allein, erzeugt von skripte/rohfassung.py -->
+<path d="{HEAD}" fill="{BLACK}"/>
+</svg>''')

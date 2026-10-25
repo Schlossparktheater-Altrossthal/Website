@@ -183,6 +183,8 @@ Offen für den Feinschliff:
 
 `konzept/rohfassung/logo-katze.svg` (aus `rohfassung.py`): dieselbe Katzen-Kontur `CAT` wie im Logo, ohne Ring, Vorhang und Bühne. Ohne Saum: die Lücke zwischen Bauch und Schwanz ist frei (transparent), damit die Datei auf jedem Hintergrund funktioniert. Von der Saumspitze läuft die Kontur tangential in die Bauch-Unterkante (vorher Ecke, wo Saum und Bauchlinie sich schnitten). viewBox = Umriss + 8 px Rand, Farbe `#171717`.
 
+Nur Kopf: `konzept/rohfassung/logo-katze-kopf.svg` – Körperkontur vom Hals vorn (469,5|515) über Kinn, Ohren, Hinterkopf bis zum Nacken (514|442,5), unten ein runder Halsabschluss, tangential aus dem Nacken. Für kleine Größen bleibt Symbol 3a die Wahl (Kopf wirkt klein generisch, siehe Stufe 4).
+
 ## Varianten (2026-10-25, Konzeptblatt 3)
 
 Einfarbig und Negativ entstehen per Farbzuordnung direkt aus `logo-roh.svg` (`skripte/sheet3.py`): Druckfarbe = Ring, Rahmen, Bühnenkante, Vorhangrot, Fugen, Katze; Papierfarbe = Falten, Boden, Bühne, Schwanz-Saum. So bleiben Falten und Dielen als helle Linien lesbar, ohne eigene Zeichnung.
