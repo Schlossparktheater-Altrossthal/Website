@@ -98,7 +98,7 @@ Stufen (`konzept/katze/`):
 |---|---|
 | 1 nachgezeichnet | wie im Logo, geglättet |
 | 2 reduziert | Spalt gefüllt, ein Ohr, Pfoten verschmolzen, Schwanz dicker |
-| 3 geometrisch | glatte Profil-Silhouette, große Ohren, kurzer dicker Schwanz |
+| 3 geometrisch | glatte Profil-Silhouette, große Ohren, Schwanz vorn mit Lücke (wie der Glanzstrich im Original) |
 | 4 Kopf | nur Kopf mit Ohren |
 
 Ergebnis des Größentests (`groessentest.png`):
@@ -116,6 +116,12 @@ Vorschlag Größensystem:
 | 48–96 px (App-Icon, PWA) | ohne Ring, Rahmen + Vorhangrot oder BSZ-Blau, Katze Stufe 2 oder 3 |
 | 16–32 px (Favicon) | ohne Ring, Katze Stufe 3 möglichst groß |
 | Statusleiste (24 dp) | Stufe 3 weiß |
+
+Schwanzansatz (2026-10-25 korrigiert): Im Original wächst der Schwanz unten rechts aus der Hüfte und läuft vor der Bühnenkante nach links. Die Hüftwölbung ist schon der Schwanzansatz.
+- Stufe 1/2: Hüftwölbung aus dem Körper geschnitten. Die Außenkante des Schwanzes setzt tangential am senkrechten Hüftrand an (x ≈ 623–625) und überlappt mit dem Körper. Der Schwanz ist ein eigenes `<path>`-Element, damit die Überlappung kein Loch ergibt.
+- Stufe 3: Schwanz läuft wie im Original vorn unter der Katze, mit schmaler Lücke zum Körper.
+- Die Kurvenglättung (Catmull-Rom) begrenzt die Tangentenlänge auf ⅓ der Segmentlänge, sonst entstehen an langen Geraden Dorne.
+- In kleinen Größen (≤ 32 px) wird die Lücke bei Stufe 3 zu einem hellen Strich. Für Favicon/Statusleiste sollte sie entfallen.
 
 Offen: Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
 
