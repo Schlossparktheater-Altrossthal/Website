@@ -173,7 +173,7 @@ self.addEventListener("push", (event) => {
         renotify: Boolean(payload.tag),
         requireInteraction: Boolean(payload.urgent),
         icon: "/pwa-icons/192",
-        badge: "/pwa-icons/192",
+        badge: "/benachrichtigung.png",
         data: { url: payload.url || "/mitglieder/benachrichtigungen" },
       });
     })(),

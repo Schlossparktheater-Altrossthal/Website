@@ -6,43 +6,40 @@ import { ImageResponse } from "next/og";
 /** Grundfarbe der installierten App (Splash, Titelleiste); Standard-Theme ist dunkel. */
 export const PWA_BACKGROUND_COLOR = "#0f1115";
 
+/**
+ * App-Icon = roter Hintergrund, Katze, bunter Ring (docs/logo/skripte/app_icons.py, 2026-10-25).
+ * Die PNGs sind randlos; maskable hat Ring und Katze in der sicheren Zone (Android schneidet bis zu 20 % weg).
+ */
 export const PWA_ICON_VARIANTS = {
-  "192": { size: 192, padding: 0.04, background: false },
-  "512": { size: 512, padding: 0.04, background: false },
-  // Maskable: Android schneidet bis zu 20 % weg – das Logo bleibt in der sicheren Zone.
-  "maskable-512": { size: 512, padding: 0.18, background: true },
-  apple: { size: 180, padding: 0.08, background: true },
+  "192": { size: 192, file: "app-icon.png" },
+  "512": { size: 512, file: "app-icon.png" },
+  "maskable-512": { size: 512, file: "app-icon-maskable.png" },
+  apple: { size: 180, file: "app-icon.png" },
 } as const;
 
 export type PwaIconVariant = keyof typeof PWA_ICON_VARIANTS;
 
-let logoDataUrl: Promise<string> | null = null;
+const iconDataUrls = new Map<string, Promise<string>>();
 
-function readLogo() {
-  logoDataUrl ??= readFile(path.join(process.cwd(), "public", "Logo-Sommertheater.png")).then(
-    (buffer) => `data:image/png;base64,${buffer.toString("base64")}`,
-  );
-  return logoDataUrl;
+function readIcon(file: string) {
+  let dataUrl = iconDataUrls.get(file);
+  if (!dataUrl) {
+    dataUrl = readFile(path.join(process.cwd(), "public", file)).then(
+      (buffer) => `data:image/png;base64,${buffer.toString("base64")}`,
+    );
+    iconDataUrls.set(file, dataUrl);
+  }
+  return dataUrl;
 }
 
-/** PNG-Icon aus dem Theaterlogo, damit keine Binärdateien ins Repository müssen. */
+/** PNG-Icon in der gewünschten Größe aus dem App-Icon (public/app-icon*.png). */
 export async function renderPwaIcon(variant: PwaIconVariant) {
-  const { size, padding, background } = PWA_ICON_VARIANTS[variant];
-  const logo = await readLogo();
-  const inner = Math.round(size * (1 - padding * 2));
+  const { size, file } = PWA_ICON_VARIANTS[variant];
+  const icon = await readIcon(file);
   return new ImageResponse(
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: background ? PWA_BACKGROUND_COLOR : "transparent",
-      }}
-    >
+    <div style={{ width: "100%", height: "100%", display: "flex" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse rendert nur <img> */}
-      <img src={logo} width={inner} height={inner} alt="" />
+      <img src={icon} width={size} height={size} alt="" />
     </div>,
     { width: size, height: size },
   );

@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   description: "Mystische Bühne unter freiem Himmel",
   icons: {
-    icon: "/Logo-Sommertheater.png",
-    shortcut: "/Logo-Sommertheater.png",
+    icon: "/app-icon.png",
+    shortcut: "/app-icon.png",
     // Aus src/app/apple-icon.tsx (180 px, mit Hintergrund); explizite `icons` ersetzen die Dateikonvention.
     apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
   },
