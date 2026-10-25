@@ -26,6 +26,8 @@ Stand: 2026-10-25 – Konzeptblätter fertig, Symbol 3a für kleine Größen gew
 | `konzept/icons/*.svg` | Icon-Satz mit Symbol 3a: Favicon rot/blau, App-Icon (maskable), Statusleiste, Symbol schwarz |
 | `konzept/rohfassung/logo-roh.svg` | Vektor-Rohfassung des Gesamtlogos |
 | `konzept/rohfassung/abgleich.png` | Original / Rohfassung / 50:50 überblendet |
+| `konzept/konzeptblatt-3.{png,pdf}` | Konzeptblatt 3: Vollfarbe, Einfarbig, Negativ, Größenreihe, Favicon blau/rot (Quelle `konzept-3.html`) |
+| `konzept/varianten/logo-*.svg` | Varianten aus der Rohfassung: vollfarbe, einfarbig-schwarz, negativ-blau |
 | `skripte/` | Mess- und Erzeugungsskripte, siehe unten |
 
 ## Messergebnisse
@@ -177,6 +179,12 @@ Offen für den Feinschliff:
 - Offen zur Positionierung: Der Raffhalter liegt bei y = 513–565 (Mitte ≈ 539), die waagerechte Ringfuge bei y ≈ 521. Prüfen, ob beide aufeinander ausgerichtet werden sollen. Ebenso, ob Faltenspitzen, Knoten und Bühnenkante auf gemeinsamen Linien liegen sollen.
 - Prüfen, ob Faltenspitzen und Saum noch stärker vereinfacht werden sollen (z. B. gleiche Krümmung für alle Falten).
 
+## Varianten (2026-10-25, Konzeptblatt 3)
+
+Einfarbig und Negativ entstehen per Farbzuordnung direkt aus `logo-roh.svg` (`skripte/sheet3.py`): Druckfarbe = Ring, Rahmen, Bühnenkante, Vorhangrot, Fugen, Katze; Papierfarbe = Falten, Boden, Bühne, Schwanz-Saum. So bleiben Falten und Dielen als helle Linien lesbar, ohne eigene Zeichnung.
+
+Größenreihe: Das volle Logo trägt bis 64 px, bei 48 px ist die Katze nur noch ein Fleck, bei 32 px unlesbar → darunter Symbol 3a.
+
 ## Nächste Schritte
 
 1. ~~Konzeptblatt 2~~ – erledigt 2026-10-25
@@ -202,6 +210,8 @@ python -I skripte/sheet2.py                                              # Konze
 python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg (Stufe 1–3, 4)
 python -I skripte/rohfassung.py                                          # konzept/rohfassung/logo-roh.svg + Kurvenabweichung
 python -I skripte/abgleich_vorhang.py roh.png konzept/rohfassung/abgleich-vorhang.png   # roh.png = gerendertes logo-roh.svg
+python -I skripte/sheet3.py                                              # konzept/varianten/*.svg + konzept-3.html
+node skripte/p.cjs "$PW" konzept/konzept-3.html konzept/konzeptblatt-3   # konzeptblatt-3.png/.pdf
 python -I skripte/icons.py                                               # konzept/icons/*.svg mit Symbol 3a
 python -I skripte/size_test.py && node skripte/size_test.cjs "$PW" && python -I skripte/size_sheet.py   # groessentest.png
 PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
