@@ -3,7 +3,7 @@
 Arbeitsordner für die Überarbeitung des Logos (Vorhang mit Katze, darum der Ring).
 Ziel: saubere Konstruktion (Raster, Symmetrien, Farben) festlegen und dann final vektorisieren.
 
-Stand: 2026-10-25 – Konzeptblatt 1 fertig, Entscheidungen offen.
+Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Entscheidungen getroffen, nächster Schritt Vektor-Rohfassung.
 
 ## Ordner
 
@@ -16,6 +16,11 @@ Stand: 2026-10-25 – Konzeptblatt 1 fertig, Entscheidungen offen.
 | `konzept/A-messung.svg` | Messung über dem Original (Bild eingebettet) |
 | `konzept/B-konstruktion.svg` | Rastervorschlag mit u = 1/48 |
 | `konzept/spiegel-check.png` | Original + gespiegelt, 50/50 überblendet |
+| `konzept/konzeptblatt-2.{png,pdf}` | Konzeptblatt 2: Ring nach BSZ über dem jetzigen Logo, technische Zeichnung, Prüfung, Variantenskizzen |
+| `konzept/konzept-2.html` | Quelle von Konzeptblatt 2 |
+| `konzept/A2-ring-ueberlagerung.svg` | Neuer Ring (rot) über dem jetzigen Logo |
+| `konzept/B2-technische-zeichnung.svg` | Logogrid/technische Zeichnung mit Maßen in R |
+| `konzept/ring-bsz-abgleich.png` | Konstruktion gegen BSZ-Original (96 % Deckung, Rest Randpixel) |
 | `skripte/` | Mess- und Erzeugungsskripte, siehe unten |
 
 ## Messergebnisse
@@ -54,18 +59,34 @@ Maße relativ zum Außenradius R des Rings.
 
 Weitere Farben im Logo (gemessen): Vorhang `#E84820`, Falten `#A00A0A`, Boden `#C07A30`, Rahmen/Katze `#171717`.
 
-## Offene Entscheidungen
+## Entscheidungen (2026-10-25)
 
-1. Ring: BSZ-Maße und -Farben 1:1 übernehmen (Empfehlung) oder eigenes 2u-Raster (5–9 % kräftiger)?
-2. Segmente: BSZ-Winkel mit Braun 34,5° (Empfehlung) oder fünf gleiche Segmente?
-3. Vorhang: eine Hälfte zeichnen und spiegeln oder Handzeichnungs-Charakter behalten?
-4. Katze: Position und Silhouette übernehmen oder auf die Achse setzen?
-5. Varianten: einfarbig/negativ, Favicon ohne Dielen und Falten?
-6. ~~Nutzung des BSZ-Rings mit dem BSZ abstimmen~~ – erledigt, ist abgestimmt (2026-10-25).
+1. **Ring:** Maße und Farben 1:1 vom BSZ übernehmen. Die Nutzung ist mit dem BSZ abgestimmt.
+2. **Segmente:** BSZ-Winkel 30,5° / 31,9° / 34,4° / 31,9° / 30,5°.
+3. **Vorhang:** eine Hälfte nachzeichnen und spiegeln.
+4. **Katze:** Position (leicht rechts, Blick nach links) und Pose bleiben, nur der Umriss wird geglättet.
+5. **Varianten:** Vollfarbe, Einfarbig, Negativ (weiß auf BSZ-Blau), Favicon/App-Icon und ein Statusleisten-Icon für Benachrichtigungen (weiße Katzen-Silhouette, Android 24 dp).
+
+## Konstruktion Ring (`skripte/ring_geometry.py`)
+
+Alle Maße relativ zum Außenradius R. Im 1024er-Raster ist R = 456 px, die Mitte liegt bei 512|512.
+
+| Maß | Wert |
+|---|---|
+| Innenradius Ring | 0,8909 R |
+| Fugen oben (parallele Kanten) | 0,0772 R, Mittellinien bei ±19,56° und ±56,14° zur Senkrechten |
+| Waagerechte Fuge | 0,0738 R, Mitte 0,0201 R unter dem Kreismittelpunkt |
+| Schwarzer Rahmen | 0,750–0,794 R (aus dem Original übernommen) |
+| Bühnenbild | innerhalb 0,750 R |
+| Farben | `#FFDD00` `#C7A100` `#744A27` `#015824` `#09783A` `#004D6B` |
+
+Hinweise aus den Variantenskizzen:
+- In Einfarbig und Negativ wirkt die Katze allein klein im großen Kreis. Beim Ausarbeiten prüfen, ob dort Bühnenkante oder Vorhang-Umriss mit hinein sollen.
+- Bei 16 px ist die Katze nicht mehr erkennbar. Eventuell braucht es eine eigene 16-px-Fassung (nur Ring + Fläche).
 
 ## Nächste Schritte
 
-1. Konzeptblatt 2: technische Zeichnung/Logogrid nach den Entscheidungen, BSZ-Ring und Sommertheater-Ring übereinander
+1. ~~Konzeptblatt 2~~ – erledigt 2026-10-25
 2. Vektor-Rohfassung: Ring und Rahmen konstruiert, Vorhang/Katze/Boden nachgezeichnet
 3. Abgleich mit dem Original, Feinschliff
 4. Export: SVG (Haupt), einfarbig/negativ, Favicon, PNG-Größen; Austausch in Mitgliederbereich und Drupal-Theme
@@ -82,7 +103,12 @@ python -I skripte/gaps.py quellen/bsz-agrar-logo.png 0,0,772,772 415.5 395.5 297
 python -I skripte/gaps.py quellen/sommertheater-logo-1024.png - 512 513 457 405
 python -I skripte/mirror.py                                              # konzept/spiegel-check.png
 python -I skripte/sheet.py                                               # konzept/A-messung.svg, B-konstruktion.svg
-node skripte/p.cjs "$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"   # konzeptblatt-1.png/.pdf
+python -I skripte/ring_geometry.py                                       # Segmentwinkel der Konstruktion
+python -I skripte/verify_ring.py                                         # konzept/ring-bsz-abgleich.png + Deckung
+python -I skripte/sheet2.py                                              # Konzeptblatt-2-SVGs + konzept-2.html
+PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
+node skripte/p.cjs "$PW"                                                 # konzeptblatt-1.png/.pdf
+node skripte/p.cjs "$PW" konzept/konzept-2.html konzept/konzeptblatt-2   # konzeptblatt-2.png/.pdf
 ```
 
 Hinweis zu `ring.py`: Beim Sommertheater-Logo stört der schwarze Rahmen den Fit des Innenrands. Für die Ringbreite die Werte aus der Tabelle oben nehmen (r = 405–457).
