@@ -1,6 +1,6 @@
 """App-Icon und Benachrichtigungs-Icon aus der Rohfassung → konzept/icons/
 
-Entscheidung 2026-10-25: App-Icon = volles Logo (Ring, Vorhang, Bühne) auf rotem Hintergrund, Katze darin
+Entscheidung 2026-10-25: App-Icon = volles Logo (Ring, Vorhang, Bühne) auf weißem Hintergrund, Katze darin
 größer (CAT_ZOOM um die Pfoten auf der Bühnenkante, Ohren bleiben unter der Schabracke).
 Benachrichtigungs-Icon (Android-Statusleiste/Badge) = Katzenkopf, weiß auf transparent (nur Alpha zählt).
 Vorher rohfassung.py laufen lassen.
@@ -20,7 +20,7 @@ ZOOMED = logo.replace('<g id="katze">', f'<g id="katze" transform="translate(526
 LOGO_BODY = re.sub(r'^.*?<svg[^>]*>|</svg>\s*$', '', ZOOMED, flags=re.S)
 
 def icon(ring_scale):
-    return (f'<rect width="1024" height="1024" fill="{RED}"/>'
+    return (f'<rect width="1024" height="1024" fill="#fff"/>'   # weißer Hintergrund (User 2026-10-25)
             f'<g transform="translate(512 512) scale({ring_scale}) translate(-512 -512)">{LOGO_BODY}</g>')
 
 

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#E84820"/><g transform="translate(512 512) scale(0.88) translate(-512 -512)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#fff"/><g transform="translate(512 512) scale(0.88) translate(-512 -512)">
 <!-- Rohfassung, erzeugt von skripte/rohfassung.py -->
 <defs>
   <clipPath id="ueber-kante"><rect x="0" y="0" width="1024" height="698"/></clipPath>
