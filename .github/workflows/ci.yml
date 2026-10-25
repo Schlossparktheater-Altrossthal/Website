@@ -83,10 +83,16 @@ jobs:
         env:
           NODE_ENV: test
         run: pnpm exec vitest run --coverage
+      - name: Read version
+        id: version
+        run: echo "version=$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" >> "$GITHUB_OUTPUT"
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # Neuer Code = seit der letzten Version (New-Code-Definition „previous version“).
+          args: -Dsonar.projectVersion=${{ steps.version.outputs.version }}
 
   playwright:
     runs-on: ubuntu-latest
