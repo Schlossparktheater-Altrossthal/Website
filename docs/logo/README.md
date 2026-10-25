@@ -143,26 +143,29 @@ Symbol-Varianten 3a/3b (2026-10-25, Entscheidung: Stufe 3 darf eigenständig und
 
 Offen (ältere Notiz zu Stufe 3): Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
 
-## Vektor-Rohfassung (2026-10-25, `skripte/rohfassung.py`)
+## Vektor-Rohfassung (2026-10-25, `skripte/rohfassung.py`, `skripte/vorhang.py`)
 
 Aufbau von unten nach oben, alles im 1024er-Raster (R = 456, Mitte 512|512):
 
 | Ebene | Herkunft |
 |---|---|
 | Ring | `ring_geometry.svg_paths` (BSZ-Maße und -Farben) |
-| Bühne (weiß) | Kreis 0,750 R, dient zugleich als Clip für Boden und Vorhang |
+| Bühne (weiß) | Kreis 0,750 R, zugleich Clip für Boden und Vorhang |
 | Boden | konstruiert: Bühnenkante y = 676–698 `#171717`, Fläche `#C07A30`, Dielenfugen 8 px im gleichmäßigen Abstand 36 px (`#4A2E12`) |
-| Vorhang | linke Hälfte (x ≤ 515) aus dem Original nachgezeichnet, Vorhangrot `#E84820` und Falten `#A00A0A` als getrennte Pfade, per `<use>` an x = 512 gespiegelt. Außen bis unter den Rahmen verlängert, damit die Kante der Rahmenkreis ist |
+| Schabracke | 3 Pfade, symmetrisch: Fläche mit Unterkante + 2 Faltenbänder (Sicheln) |
+| Seitenvorhang | 9 Pfade, linke Hälfte, per `<use>` an x = 512 gespiegelt: oberer Teil, Saum, 2 Falten, Raffhalter (2 Rechtecke), unterer Teil, 2 Falten unten |
 | Rahmen | Kreisring 0,750–0,794 R |
 | Katze | Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`) |
 
-Ergebnis (`abgleich.png`): Ring, Rahmen, Vorhang und Katze decken sich mit dem Original. Sichtbar anders sind nur der Ring (gewollt, BSZ-Maße) und die Dielen (jetzt gleichmäßig).
+Vorhang mit einfachen Mitteln (2026-10-25): Die erste Fassung war Pixel-Nachzeichnung (wellige Kanten, viele Knoten, schlechte Deckung) und ist verworfen. Jetzt ist **jede Kante genau eine kubische Bézierkurve** mit festen Endpunkten. Außenkanten sind Geraden, die der Bühnenkreis abschneidet. Die Kontrollpunkte werden per Least-Squares an Messpunkte aus dem Original angepasst (Messpunkte stehen in `vorhang.py`).
+- Abweichung je Kurve zu den Messpunkten: höchstens 1,5 px (1024er).
+- Flächenvergleich Vorhang links (`skripte/abgleich_vorhang.py`): 6,4 % Fehlpixel, fast nur 1-px-Kantensaum des Originals.
+- `konzept/rohfassung/abgleich-vorhang.png`: Original | Rohfassung mit Original-Kanten (cyan) | Abweichungen schwarz.
 
 Offen für den Feinschliff:
-- Schabracke: an der Spiegelachse x = 512 bleibt eine kleine Stufe in den Falten. Die Schabracke besser als eigene, symmetrisch konstruierte Form zeichnen.
-- Falten und Raffhalter sind noch nachgezeichnet (leicht wellige Kanten, kleine Reste am Raffhalter). Für die Endfassung von Hand mit wenigen Bézier-Kurven nachziehen.
-- Dielenfarbe `#4A2E12` ist geschätzt, im Original eher Dunkelbraun mit Verlauf.
-- Unterkante Vorhang auf dem Boden: im Original schräg, jetzt nachgezeichnet. Prüfen, ob eine klare Gerade besser wirkt.
+- Raffhalter: jetzt zwei schlichte Rechtecke. Im Original ist der Übergang zu den Falten weich.
+- Dielenfarbe `#4A2E12` ist geschätzt.
+- Prüfen, ob Faltenspitzen und Saum noch stärker vereinfacht werden sollen (z. B. gleiche Krümmung für alle Falten).
 
 ## Nächste Schritte
 
@@ -187,7 +190,8 @@ python -I skripte/ring_geometry.py                                       # Segme
 python -I skripte/verify_ring.py                                         # konzept/ring-bsz-abgleich.png + Deckung
 python -I skripte/sheet2.py                                              # Konzeptblatt-2-SVGs + konzept-2.html
 python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg (Stufe 1–3, 4)
-python -I skripte/rohfassung.py                                          # konzept/rohfassung/logo-roh.svg (Abgleich: abgleich.png)
+python -I skripte/rohfassung.py                                          # konzept/rohfassung/logo-roh.svg + Kurvenabweichung
+python -I skripte/abgleich_vorhang.py roh.png konzept/rohfassung/abgleich-vorhang.png   # roh.png = gerendertes logo-roh.svg
 python -I skripte/icons.py                                               # konzept/icons/*.svg mit Symbol 3a
 python -I skripte/size_test.py && node skripte/size_test.cjs "$PW" && python -I skripte/size_sheet.py   # groessentest.png
 PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
