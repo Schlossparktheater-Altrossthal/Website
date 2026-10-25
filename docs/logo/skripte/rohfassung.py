@@ -28,9 +28,10 @@ TAIL_SAUM = (TAIL_UPPER + 'L517.4,707C514,696 526.5,682.5 545,680C569,677.5 594,
 # in die Außenkante des Schwanzes über, statt dass zwei Flächen sich überlappen. Ab der Saumspitze (608|669,5)
 # schließt die Kontur an die Körper-Unterkante (597|673,5) an.
 HIP = 'C623.4,647.5 626,650 630,654.5C634,659 637.5,665 637.5,674'   # Hüftwölbung: tangential aus dem senkrechten Hüftrand (623,5|644), ~45° schräg, dann steil auf die Bühnenkante
-TAIL_OUTLINE = (HIP + 'L630,688C625,696 617,701 606,704C590,708 560,709 544,711.5'
+# Ecke bei (637,5|674) und Gerade bis (630|688) durch einen tangentialen Bogen ersetzt; Unterkante etwas höher → schlanker
+TAIL_OUTLINE = (HIP + 'C637.5,690 620,699 601,702C584,704.5 560,708 544,711.5'
                 'C549,714 557,720 557,724C557,731 549,736 537,736.5C527,737 516,730 517,715'
-                'C518,700 530,688 546,685C570,683 595,677 608,669.5L597,673.5')
+                'C518,700 530,688 546,685C570,683 595,677 608,669.5C602,671.5 599,673.4 597,673.5')   # weich in die Unterkante, keine Ecke
 
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
