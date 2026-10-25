@@ -20,9 +20,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
-import { CATEGORY_LABELS, formatNotificationTime } from "@/lib/notifications/format";
+import { formatNotificationTime } from "@/lib/notifications/format";
 import {
-  CATEGORY_DESCRIPTIONS,
+  CATEGORIES_WITH_ACTIONS,
   EVENT_REMINDER_LEAD_OPTIONS,
   minutesToTime,
   resolveReminderLead,
@@ -32,7 +32,6 @@ import {
   type EventReminderLead,
   type QuietHours,
 } from "@/lib/notifications/preferences";
-import type { NotificationCategory } from "@/lib/notifications/types";
 import { usePwaInstall } from "@/lib/pwa/register-sw";
 
 type Preferences = {
@@ -40,9 +39,21 @@ type Preferences = {
   mailConfigured: boolean;
   email: string | null;
   digest: DigestMode;
-  categories: { category: NotificationCategory; push: boolean; emailMode: EmailMode }[];
+  categories: PreferenceEntry[];
+  /** Verwaltungs-Themen, für die man zuständig ist (Fotoerlaubnisse, Auslagen, Lager). */
+  adminTopics: PreferenceEntry[];
   quietHours: QuietHours | null;
   reminderLead: EventReminderLead;
+};
+
+type PreferenceEntry = {
+  /** Bereich (`proben`) oder Verwaltungs-Thema (`verwaltung:fotoerlaubnisse`). */
+  key: string;
+  label: string;
+  description: string;
+  push: boolean;
+  emailMode: EmailMode;
+  actionEmail: boolean;
 };
 
 type Device = {
@@ -125,37 +136,16 @@ export function NotificationsSection() {
     }
   };
 
-  const toggleCategory = (category: NotificationCategory, value: boolean) => {
+  const updateEntry = (key: string, patch: Partial<PreferenceEntry>) => {
+    const apply = (entries: PreferenceEntry[]) =>
+      entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry));
     setPreferences((prev) =>
       prev
-        ? {
-            ...prev,
-            categories: prev.categories.map((entry) =>
-              entry.category === category ? { ...entry, push: value } : entry,
-            ),
-          }
+        ? { ...prev, categories: apply(prev.categories), adminTopics: apply(prev.adminTopics) }
         : prev,
     );
-    void savePreference({ category, push: value }).catch((error) => {
-      console.error("[NotificationsSection] save category failed", error);
-      toast.error("Konnte nicht gespeichert werden.", { duration: 5000 });
-      void load();
-    });
-  };
-
-  const setEmailMode = (category: NotificationCategory, emailMode: EmailMode) => {
-    setPreferences((prev) =>
-      prev
-        ? {
-            ...prev,
-            categories: prev.categories.map((entry) =>
-              entry.category === category ? { ...entry, emailMode } : entry,
-            ),
-          }
-        : prev,
-    );
-    void savePreference({ category, emailMode }).catch((error) => {
-      console.error("[NotificationsSection] save email mode failed", error);
+    void savePreference({ category: key, ...patch }).catch((error) => {
+      console.error("[NotificationsSection] save preference failed", error);
       toast.error("Konnte nicht gespeichert werden.", { duration: 5000 });
       void load();
     });
@@ -304,20 +294,20 @@ export function NotificationsSection() {
           steht immer alles.
         </p>
         <ul className="divide-y divide-border/60">
-          {preferences.categories.map(({ category, push: enabled }) => {
-            const id = `push-category-${category}`;
+          {preferences.categories.map(({ key, label, description, push: enabled }) => {
+            const id = `push-category-${key}`;
             return (
-              <li key={category} className="flex min-h-12 items-center gap-3 py-2">
+              <li key={key} className="flex min-h-12 items-center gap-3 py-2">
                 <div className="min-w-0 flex-1">
                   <label htmlFor={id} className="text-sm font-medium text-foreground">
-                    {CATEGORY_LABELS[category]}
+                    {label}
                   </label>
-                  <p className="text-xs text-muted-foreground">{CATEGORY_DESCRIPTIONS[category]}</p>
+                  <p className="text-xs text-muted-foreground">{description}</p>
                 </div>
                 <Switch
                   id={id}
                   checked={enabled}
-                  onCheckedChange={(value) => toggleCategory(category, value)}
+                  onCheckedChange={(value) => updateEntry(key, { push: value })}
                 />
               </li>
             );
@@ -332,24 +322,16 @@ export function NotificationsSection() {
             ? "In deinem Profil ist keine E-Mail-Adresse hinterlegt."
             : !preferences.mailConfigured
               ? "Der Mailversand ist gerade nicht eingerichtet – deine Auswahl gilt, sobald er läuft."
-              : `An ${preferences.email}. Aufgaben und Dringendes kommen immer sofort. Den Rest bekommst du sofort, gesammelt in der Zusammenfassung oder gar nicht.`}
+              : `An ${preferences.email}. Dringendes kommt immer sofort. Sonst wählst du je Bereich: sofort, gesammelt in der Zusammenfassung oder gar nicht.`}
         </p>
         <ul className="divide-y divide-border/60">
-          {preferences.categories.map(({ category, emailMode }) => (
-            <li
-              key={category}
-              className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2"
-            >
-              <span className="text-sm font-medium text-foreground">
-                {CATEGORY_LABELS[category]}
-              </span>
-              <SegmentedControl
-                aria-label={`E-Mail für ${CATEGORY_LABELS[category]}`}
-                value={emailMode}
-                onValueChange={(value) => setEmailMode(category, value)}
-                options={EMAIL_MODE_OPTIONS}
-              />
-            </li>
+          {preferences.categories.map((entry) => (
+            <EmailRow
+              key={entry.key}
+              entry={entry}
+              showActionSwitch={CATEGORIES_WITH_ACTIONS.some((category) => category === entry.key)}
+              onChange={(patch) => updateEntry(entry.key, patch)}
+            />
           ))}
         </ul>
         <div className="mt-3 flex flex-col gap-2 border-t border-border/60 pt-3 sm:flex-row sm:items-center">
@@ -375,6 +357,28 @@ export function NotificationsSection() {
           </Select>
         </div>
       </Card>
+
+      {preferences.adminTopics.length ? (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-foreground">Verwaltung</h3>
+          <p className="mb-2 text-sm text-muted-foreground">
+            Hinweise zu dem, was du verwaltest. Sie gehen meist an mehrere – wer sich kümmert, hakt
+            die Aufgabe für alle ab. Wer nur die Glocke nutzen möchte, schaltet die Mails hier aus.
+          </p>
+          <ul className="divide-y divide-border/60">
+            {preferences.adminTopics.map((entry) => (
+              <EmailRow
+                key={entry.key}
+                entry={entry}
+                showDescription
+                showPushSwitch
+                showActionSwitch
+                onChange={(patch) => updateEntry(entry.key, patch)}
+              />
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       <Card className="space-y-3 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -517,5 +521,65 @@ export function NotificationsSection() {
         }}
       />
     </div>
+  );
+}
+
+/** Eine Zeile „E-Mail“: Modus für Hinweise, optional Aufgaben-Mail und Push. */
+function EmailRow({
+  entry,
+  showDescription = false,
+  showPushSwitch = false,
+  showActionSwitch = false,
+  onChange,
+}: {
+  entry: PreferenceEntry;
+  showDescription?: boolean;
+  showPushSwitch?: boolean;
+  showActionSwitch?: boolean;
+  onChange: (patch: Partial<PreferenceEntry>) => void;
+}) {
+  const actionId = `action-email-${entry.key}`;
+  const pushId = `push-topic-${entry.key}`;
+  return (
+    <li className="space-y-2 py-2.5">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <div className="min-w-0">
+          <span className="text-sm font-medium text-foreground">{entry.label}</span>
+          {showDescription ? (
+            <p className="text-xs text-muted-foreground">{entry.description}</p>
+          ) : null}
+        </div>
+        <SegmentedControl
+          aria-label={`E-Mail für ${entry.label}`}
+          value={entry.emailMode}
+          onValueChange={(value) => onChange({ emailMode: value })}
+          options={EMAIL_MODE_OPTIONS}
+        />
+      </div>
+      {showActionSwitch ? (
+        <div className="flex items-center gap-3">
+          <label htmlFor={actionId} className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Aufgaben trotzdem sofort per Mail (z. B. „bitte prüfen“)
+          </label>
+          <Switch
+            id={actionId}
+            checked={entry.actionEmail}
+            onCheckedChange={(value) => onChange({ actionEmail: value })}
+          />
+        </div>
+      ) : null}
+      {showPushSwitch ? (
+        <div className="flex items-center gap-3">
+          <label htmlFor={pushId} className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Übrige Hinweise per Push (Aufgaben kommen immer)
+          </label>
+          <Switch
+            id={pushId}
+            checked={entry.push}
+            onCheckedChange={(value) => onChange({ push: value })}
+          />
+        </div>
+      ) : null}
+    </li>
   );
 }

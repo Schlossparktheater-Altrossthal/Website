@@ -14,7 +14,12 @@ import { prisma } from "@/lib/prisma";
 import { absoluteActionUrl } from "./email";
 import { CATEGORY_LABELS } from "./format";
 import { DIGEST_HOUR, resolveDigestMode, resolveEmailMode, type DigestMode } from "./preferences";
-import { NOTIFICATION_CATEGORIES, NOTIFICATION_TYPES, type NotificationCategory } from "./types";
+import {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_TYPES,
+  preferenceKey,
+  type NotificationCategory,
+} from "./types";
 
 const logger = createLogger("mail-digest");
 
@@ -181,7 +186,14 @@ export async function dispatchEmailDigests(now = new Date()) {
       id: true,
       userId: true,
       notification: {
-        select: { title: true, body: true, actionUrl: true, category: true, createdAt: true },
+        select: {
+          title: true,
+          body: true,
+          actionUrl: true,
+          category: true,
+          type: true,
+          createdAt: true,
+        },
       },
     },
     orderBy: { notification: { createdAt: "asc" } },
@@ -218,8 +230,11 @@ export async function dispatchEmailDigests(now = new Date()) {
       .filter((row) => row.userId === user.id)
       .filter(
         (row) =>
-          resolveEmailMode(modeByUserCategory.get(`${user.id}:${row.notification.category}`)) ===
-          "digest",
+          resolveEmailMode(
+            modeByUserCategory.get(
+              `${user.id}:${preferenceKey(row.notification.category, row.notification.type)}`,
+            ),
+          ) === "digest",
       )
       .filter((row) => !own?.digestSentAt || row.notification.createdAt > own.digestSentAt)
       .map((row) => ({

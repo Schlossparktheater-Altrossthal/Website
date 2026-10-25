@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { asCategory, countInbox } from "./inbox-shared";
 import type { PreparedNotification } from "./notify";
 import { isInQuietHours, shouldPush } from "./preferences";
-import { NOTIFICATION_TYPES } from "./types";
+import { NOTIFICATION_TYPES, preferenceKey } from "./types";
 
 /** Web Push per VAPID (ohne Fremddienst). Schlüssel aus Vault, siehe `.env.example`. */
 export function readVapidConfig() {
@@ -129,7 +129,10 @@ export async function pushNotification(prepared: PreparedNotification) {
       select: { id: true, userId: true, endpoint: true, p256dh: true, auth: true },
     }),
     prisma.notificationPreference.findMany({
-      where: { userId: { in: prepared.recipientIds }, category: prepared.category },
+      where: {
+        userId: { in: prepared.recipientIds },
+        category: preferenceKey(prepared.category, prepared.type),
+      },
       select: { userId: true, category: true, push: true },
     }),
     prisma.notificationSettings.findMany({

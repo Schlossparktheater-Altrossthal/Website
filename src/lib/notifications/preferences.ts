@@ -1,6 +1,7 @@
 import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 import {
+  type AdminTopic,
   NOTIFICATION_TYPES,
   type NotificationCategory,
   type NotificationKind,
@@ -13,8 +14,24 @@ export const CATEGORY_DESCRIPTIONS: Record<NotificationCategory, string> = {
   proben: "Neue und geänderte Proben, Absagen",
   termine: "Treffen, Arbeitseinsätze und andere Termine",
   gewerke: "Anfragen, Aufgaben und Termine deiner Gewerke",
-  produktion: "Besetzung und Fotoerlaubnisse",
+  produktion: "Besetzung, Fristen und deine eigene Fotoerlaubnis",
+  verwaltung: "Was du verwaltest: Fotoerlaubnisse, Auslagen, Lager",
   system: "Hinweise der Website",
+};
+
+/** Bereiche, in denen Aufgaben vorkommen – nur dort gibt es den Schalter „Aufgaben per Mail“. */
+export const CATEGORIES_WITH_ACTIONS: readonly NotificationCategory[] = ["proben", "gewerke"];
+
+export const ADMIN_TOPIC_LABELS: Record<AdminTopic, string> = {
+  fotoerlaubnisse: "Fotoerlaubnisse",
+  auslagen: "Auslagen",
+  lager: "Lager",
+};
+
+export const ADMIN_TOPIC_DESCRIPTIONS: Record<AdminTopic, string> = {
+  fotoerlaubnisse: "Neue Einreichungen zum Prüfen – weil du Fotoerlaubnisse verwalten darfst",
+  auslagen: "Eingereichte Auslagen – weil du sie prüfst (Gewerksleitung oder Kasse)",
+  lager: "Gemeldete Mängel und fällige Prüfungen – weil du das Lager verwaltest",
 };
 
 /**
@@ -154,15 +171,18 @@ export function resolveDigestMode(stored: string | null | undefined): DigestMode
 export const DIGEST_HOUR = 18;
 
 /**
- * Soll ein Eintrag sofort per Mail kommen? Dringendes und Aufgaben immer; `forceInstant` (z. B.
- * Absagen an die Planung) außer bei „Aus“; sonst nur bei „Sofort“.
+ * Soll ein Eintrag sofort per Mail kommen? Dringendes immer; Aufgaben, solange `actionEmail` nicht
+ * abgeschaltet ist; `forceInstant` (z. B. Absagen an die Planung) außer bei „Aus“; sonst nur bei
+ * „Sofort“.
  */
 export function shouldEmailInstantly(
   notification: { kind: NotificationKind; priority: NotificationPriority },
   mode: EmailMode,
   forceInstant = false,
+  actionEmail = true,
 ) {
-  if (notification.priority === "urgent" || notification.kind === "action") return true;
+  if (notification.priority === "urgent") return true;
+  if (notification.kind === "action") return actionEmail;
   if (mode === "off") return false;
   return mode === "instant" || forceInstant;
 }

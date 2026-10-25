@@ -11,6 +11,7 @@ export const NOTIFICATION_CATEGORIES = [
   "termine",
   "gewerke",
   "produktion",
+  "verwaltung",
   "system",
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -119,13 +120,13 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   casting: { category: "produktion", kind: "info", priority: "normal", severity: "info" },
   "photo-consent": { category: "produktion", kind: "info", priority: "normal", severity: "info" },
   "inventory-defect": {
-    category: "gewerke",
+    category: "verwaltung",
     kind: "info",
     priority: "normal",
     severity: "warning",
   },
   "inventory-inspection": {
-    category: "gewerke",
+    category: "verwaltung",
     kind: "info",
     priority: "normal",
     severity: "warning",
@@ -134,6 +135,40 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   test: { category: "system", kind: "info", priority: "normal", severity: "info" },
   "test-emergency": { category: "system", kind: "info", priority: "urgent", severity: "error" },
 };
+
+/**
+ * Themen im Bereich „Verwaltung“: Hinweise an Leute, die etwas verwalten (Fotoerlaubnisse prüfen,
+ * Auslagen freigeben, Lager). Jedes Thema hat eine eigene E-Mail-/Push-Einstellung.
+ */
+export const ADMIN_TOPICS = ["fotoerlaubnisse", "auslagen", "lager"] as const;
+export type AdminTopic = (typeof ADMIN_TOPICS)[number];
+
+const ADMIN_TOPIC_BY_TYPE: Partial<Record<NotificationType, AdminTopic>> = {
+  "photo-consent": "fotoerlaubnisse",
+  "expense-claim": "auslagen",
+  "inventory-defect": "lager",
+  "inventory-inspection": "lager",
+};
+
+export function adminTopicForType(type: string | null): AdminTopic | null {
+  return ADMIN_TOPIC_BY_TYPE[type as NotificationType] ?? null;
+}
+
+/**
+ * Schlüssel in `NotificationPreference.category`: der Bereich, in der Verwaltung das Thema
+ * (`verwaltung:fotoerlaubnisse`).
+ */
+export function preferenceKey(category: string, type: string | null) {
+  if (category !== "verwaltung") return category;
+  const topic = adminTopicForType(type);
+  return topic ? `verwaltung:${topic}` : category;
+}
+
+/** Alle Einstellungs-Schlüssel: Bereiche, die Verwaltung aufgeteilt nach Themen. */
+export const PREFERENCE_KEYS: readonly string[] = [
+  ...NOTIFICATION_CATEGORIES.filter((category) => category !== "verwaltung"),
+  ...ADMIN_TOPICS.map((topic) => `verwaltung:${topic}`),
+];
 
 export function isNotificationType(value: unknown): value is NotificationType {
   return typeof value === "string" && Object.hasOwn(NOTIFICATION_TYPE_META, value);

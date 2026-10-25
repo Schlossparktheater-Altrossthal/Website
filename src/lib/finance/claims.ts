@@ -195,6 +195,7 @@ export async function submitClaim(userId: string, input: ClaimInput, receipts: R
   await notify({
     type: NOTIFICATION_TYPES.EXPENSE_CLAIM,
     recipients: toDepartment ? leads : await treasurerIds(),
+    category: "verwaltung",
     actorId: userId,
     title: `Auslage ${formatCents(claim.amountCents)}: ${claim.purpose}`,
     body: `${getUserDisplayName(claim.submittedBy)}${claim.department ? ` · ${claim.department.name}` : ""} – bitte prüfen.`,
@@ -237,6 +238,7 @@ export async function departmentCheckClaim(access: FinanceAccess, actorId: strin
   await notify({
     type: NOTIFICATION_TYPES.EXPENSE_CLAIM,
     recipients: await treasurerIds(),
+    category: "verwaltung",
     actorId,
     title: `Auslage ${formatCents(claim.amountCents)}: ${claim.purpose}`,
     body: `${getUserDisplayName(claim.submittedBy)} · vom Gewerk ${claim.department?.name ?? ""} bestätigt.`,

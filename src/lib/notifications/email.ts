@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { CATEGORY_LABELS } from "./format";
 import type { PreparedNotification } from "./notify";
 import { resolveEmailMode, shouldEmailInstantly } from "./preferences";
-import { NOTIFICATION_TYPES, type NotificationCategory } from "./types";
+import { NOTIFICATION_TYPES, preferenceKey, type NotificationCategory } from "./types";
 
 const TEST_TYPES = new Set<string>([NOTIFICATION_TYPES.TEST, NOTIFICATION_TYPES.TEST_EMERGENCY]);
 
@@ -72,16 +72,26 @@ export async function emailNotification(
       select: { id: true, email: true, firstName: true },
     }),
     prisma.notificationPreference.findMany({
-      where: { userId: { in: prepared.recipientIds }, category: prepared.category },
-      select: { userId: true, emailMode: true },
+      where: {
+        userId: { in: prepared.recipientIds },
+        category: preferenceKey(prepared.category, prepared.type),
+      },
+      select: { userId: true, emailMode: true, actionEmail: true },
     }),
   ]);
-  const modeByUser = new Map(preferences.map((entry) => [entry.userId, entry.emailMode]));
+  const preferenceByUser = new Map(preferences.map((entry) => [entry.userId, entry]));
 
   const results = await Promise.all(
     users.map(async (user) => {
-      const mode = resolveEmailMode(modeByUser.get(user.id));
-      if (!user.email || !shouldEmailInstantly(prepared, mode, options.forceInstant)) return null;
+      const preference = preferenceByUser.get(user.id);
+      const mode = resolveEmailMode(preference?.emailMode);
+      const instant = shouldEmailInstantly(
+        prepared,
+        mode,
+        options.forceInstant,
+        preference?.actionEmail ?? true,
+      );
+      if (!user.email || !instant) return null;
       const mail = buildNotificationMail({
         userId: user.id,
         firstName: user.firstName,

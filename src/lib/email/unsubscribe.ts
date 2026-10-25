@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { getAppBaseUrl } from "@/lib/app-url";
 import { getAuthSecret } from "@/lib/auth-secret";
-import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
+import { PREFERENCE_KEYS } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
 
 /** Signierter Abmeldelink je Person – gültig ohne Anmeldung, ohne Ablauf (RFC 8058). */
@@ -45,7 +45,7 @@ export async function unsubscribeFromNotificationMails(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return false;
   await prisma.$transaction([
-    ...NOTIFICATION_CATEGORIES.map((category) =>
+    ...PREFERENCE_KEYS.map((category) =>
       prisma.notificationPreference.upsert({
         where: { userId_category: { userId, category } },
         create: { userId, category, push: false, emailMode: "off" },

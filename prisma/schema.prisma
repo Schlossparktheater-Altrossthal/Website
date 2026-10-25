@@ -2724,12 +2724,15 @@ model PushSubscription {
 /// die Standardwerte aus `src/lib/notifications/preferences.ts`.
 model NotificationPreference {
   userId    String
+  /// Bereich (`proben` …) oder Thema der Verwaltung (`verwaltung:fotoerlaubnisse`).
   category  String
   push      Boolean
   email     Boolean @default(false)
   /// E-Mail für normale Hinweise: `instant` | `digest` | `off`; null = `digest`.
   /// Dringendes und Aufgaben kommen unabhängig davon sofort (docs/Plan/email-plan.md).
   emailMode String?
+  /// Aufgaben (z. B. Fotoerlaubnis prüfen) auch per Mail; null = ja. Dringendes kommt immer.
+  actionEmail Boolean?
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, category])

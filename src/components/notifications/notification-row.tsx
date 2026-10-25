@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   CameraIcon,
   CheckIcon,
+  ClipboardCheckIcon,
   ChevronDownIcon,
   ClapperboardIcon,
   DramaIcon,
@@ -39,6 +40,7 @@ const CATEGORY_TONES: Record<NotificationCategory, string> = {
   termine: "bg-info/12 text-info",
   gewerke: "bg-warning/15 text-warning",
   produktion: "bg-success/12 text-success",
+  verwaltung: "bg-accent text-accent-foreground",
   system: "bg-muted text-muted-foreground",
 };
 
@@ -65,6 +67,7 @@ function GroupIcon({ group }: { group: InboxGroup }) {
         termine: <CalendarIcon />,
         gewerke: <UsersRoundIcon />,
         produktion: <ClapperboardIcon />,
+        verwaltung: <ClipboardCheckIcon />,
         system: <BellIcon />,
       }[group.category];
   }
@@ -85,6 +88,13 @@ export function groupTarget(group: InboxGroup): InboxTarget {
   return group.latest.groupKey
     ? { groupKeys: [group.latest.groupKey] }
     : { ids: group.items.map((item) => item.id) };
+}
+
+/** Wer eine an mehrere gerichtete Aufgabe erledigt hat (`data.resolvedByName`). */
+function resolvedBy(item: InboxItem) {
+  if (item.kind !== "action" || !item.doneAt) return null;
+  const data = item.data as { resolvedByName?: unknown } | null;
+  return typeof data?.resolvedByName === "string" ? data.resolvedByName : null;
 }
 
 function joinRequest(item: InboxItem) {
@@ -186,7 +196,7 @@ export function NotificationRow({ group, update, onNavigate, archived }: Notific
 
   const pointer = {
     onPointerDown: (event: React.PointerEvent) => {
-      if (event.pointerType !== "touch") return;
+      if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
       swipe.current = { x: event.clientX, y: event.clientY, active: false };
     },
     onPointerMove: (event: React.PointerEvent) => {
@@ -219,6 +229,12 @@ export function NotificationRow({ group, update, onNavigate, archived }: Notific
       <time dateTime={latest.createdAt}>{formatNotificationTime(latest.createdAt)}</time>
       <span aria-hidden>·</span>
       <span>{CATEGORY_LABELS[group.category]}</span>
+      {resolvedBy(latest) ? (
+        <>
+          <span aria-hidden>·</span>
+          <span className="text-success">Erledigt von {resolvedBy(latest)}</span>
+        </>
+      ) : null}
     </span>
   );
 
@@ -336,7 +352,8 @@ export function NotificationRow({ group, update, onNavigate, archived }: Notific
           ) : (
             <span className="mt-1.5 h-2 w-2" aria-hidden />
           )}
-          <div className="flex gap-0.5 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:transition-opacity [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:none)]:sr-only">
+          {/* Mit Maus beim Überfahren; auf Tablets immer sichtbar; auf dem Handy reicht Wischen. */}
+          <div className="flex gap-0.5 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:transition-opacity [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 max-sm:[@media(hover:none)]:sr-only">
             {!archived && unread && !isOpenAction ? (
               <IconAction label="Als gelesen markieren" onClick={() => void update("read", target)}>
                 <CheckIcon />
@@ -370,7 +387,7 @@ function IconAction({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-4 [&>svg]:w-4"
+      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground [@media(hover:none)]:h-10 [@media(hover:none)]:w-10 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-4 [&>svg]:w-4"
     >
       {children}
     </button>

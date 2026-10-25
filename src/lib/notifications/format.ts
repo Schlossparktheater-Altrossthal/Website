@@ -41,6 +41,7 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   termine: "Termine",
   gewerke: "Gewerke",
   produktion: "Produktion",
+  verwaltung: "Verwaltung",
   system: "System",
 };
 

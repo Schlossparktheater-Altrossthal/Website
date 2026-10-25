@@ -94,22 +94,35 @@ function buildBody(details: PhotoConsentBoardNotificationDetails): string {
   return parts.join(" ");
 }
 
+/**
+ * Fotoerlaubnis-Hinweise an alle, die sie verwalten (Bereich „Verwaltung“, Thema
+ * Fotoerlaubnisse).
+ *
+ * - Einreichung: eine Aufgabe an alle Verwaltenden.
+ * - Prüfung durch eine verwaltende Person: die Aufgabe ist für alle erledigt, im Eintrag steht,
+ *   wer es war. Die übrigen bekommen keinen weiteren Hinweis – es gibt nichts mehr zu tun.
+ * - Änderung durch das Mitglied selbst (z. B. Widerruf): ein Hinweis an alle Verwaltenden.
+ */
 export async function createPhotoConsentBoardNotification(
   client: SupportedClient,
   details: PhotoConsentBoardNotificationDetails,
 ): Promise<PhotoConsentBoardNotificationResult | null> {
+  const groupKey = `photo-consent:${details.consentId}`;
+  const reviewedByBoard =
+    details.changeType === "status-changed" &&
+    Boolean(details.actorUserId) &&
+    details.actorUserId !== details.subjectUserId;
+
+  if (details.changeType === "status-changed" && details.status !== "pending") {
+    await resolveForEveryone(client, groupKey, reviewedByBoard ? details.actorName : null);
+  }
+  if (reviewedByBoard) {
+    return null;
+  }
+
   const recipients = (await findUserIdsWithPermission(PHOTO_CONSENT_MANAGE_PERMISSION, client)).map(
     (id) => ({ id }),
   );
-
-  // Geprüfte Einreichungen sind für den ganzen Vorstand erledigt.
-  if (details.changeType === "status-changed" && details.status !== "pending") {
-    await resolveActionNotifications(
-      { type: NOTIFICATION_TYPES.PHOTO_CONSENT, groupKey: `photo-consent:${details.consentId}` },
-      client,
-    );
-  }
-
   const recipientIds = uniqueRecipientIds(recipients, [details.actorUserId]);
   if (!recipientIds.length) {
     return null;
@@ -123,6 +136,7 @@ export async function createPhotoConsentBoardNotification(
 
   return createNotification(client, {
     type: NOTIFICATION_TYPES.PHOTO_CONSENT,
+    category: "verwaltung",
     recipients: recipientIds,
     title,
     body,
@@ -131,10 +145,44 @@ export async function createPhotoConsentBoardNotification(
     // Neue Einreichungen muss der Vorstand prüfen.
     kind: details.changeType === "submitted" ? "action" : "info",
     severity: resolveSeverity(details.status),
-    groupKey: `photo-consent:${details.consentId}`,
+    groupKey,
     data: { consentId: details.consentId, status: details.status },
     realtimeMetadata: { scope: "photo-consent", consentId: details.consentId },
   });
+}
+
+/** Offene Prüf-Aufgaben für alle abhaken und vermerken, wer geprüft hat. */
+async function resolveForEveryone(
+  client: SupportedClient,
+  groupKey: string,
+  resolvedByName: string | null | undefined,
+) {
+  // Vorher merken, welche Aufgaben noch offen sind – ältere, schon erledigte bleiben unverändert.
+  const open = resolvedByName
+    ? await client.notification.findMany({
+        where: {
+          type: NOTIFICATION_TYPES.PHOTO_CONSENT,
+          groupKey,
+          kind: "action",
+          recipients: { some: { doneAt: null } },
+        },
+        select: { id: true, data: true },
+      })
+    : [];
+  await resolveActionNotifications({ type: NOTIFICATION_TYPES.PHOTO_CONSENT, groupKey }, client);
+
+  for (const notification of open) {
+    const data =
+      notification.data &&
+      typeof notification.data === "object" &&
+      !Array.isArray(notification.data)
+        ? notification.data
+        : {};
+    await client.notification.update({
+      where: { id: notification.id },
+      data: { data: { ...data, resolvedByName } },
+    });
+  }
 }
 
 export async function dispatchPhotoConsentBoardNotification(
