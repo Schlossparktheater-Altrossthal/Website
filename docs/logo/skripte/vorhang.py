@@ -67,11 +67,14 @@ LOW_R = yx({570: 257, 600: 267, 620: 274, 640: 282, 660: 288, 680: 295, 700: 302
 LA_L = yx({570: 201, 600: 207, 640: 214, 680: 218}); LA_R = yx({570: 213, 600: 218, 640: 224, 680: 227})
 LB_L = yx({570: 230, 600: 238, 640: 248, 680: 256, 720: 261}); LB_R = yx({570: 243, 600: 251, 640: 260, 680: 268, 720: 275})
 
-TIE = (522, 566)                            # Raffhalter: Falten laufen bis TIE[0] unter das Band, unten ab TIE[1]
-# Raffhalter-Band: Oberkante fällt nach rechts ab (Falten enden gestaffelt darauf), Unterkante fast waagerecht
-BAND_TOP = xy({171: 513, 185: 515, 200: 518, 215: 520, 230: 523, 245: 525})
-BAND_BOT = xy({250: 561, 235: 562, 222: 563, 205: 564, 190: 564, 172: 565})
-KNOT_X = 224
+TIE = (522, 566)                            # Falten oben laufen bis unter das Band, unten beginnen sie darin
+# Raffhalter (gemessen bei 8-facher Vergrößerung, beide Seiten verglichen):
+# Band-Oberkante: Bogen, auf dem die oberen Bahnen schräg enden; fällt nach rechts zum Knoten ab
+BAND_TOP = xy({170: 514, 180: 515.5, 190: 517, 205: 521, 218: 524, 228: 526})
+# Band-Unterkante: hängt leicht durch, schneidet die unteren Bahnen schräg an
+BAND_BOT = xy({215: 566, 200: 566, 185: 564.5, 173: 563})
+# Knoten (helle Schlaufe vorn): Ecken leicht gerundet
+KNOT = dict(tl=(223.5, 527.5), tr=(256, 526.5), br=(252.5, 556.5), bl=(223.5, 564), r=2)
 
 
 def c(p0, p3, pts, log, name):
@@ -97,9 +100,9 @@ def build(RED, FOLD):
             + _rev_sym(s2, SWAG2_BOT, log, 'Falte 2 unten') + 'Z"/>'
     # Seitenvorhang links oben: außen nur Gerade, der Bühnenkreis schneidet ab
     # Silhouette dunkel (eine einzige Außenkante), helle Fläche darüber endet an der linken Saumkante
-    tip, end = (418, TOP), (259, TIE[0] + 4)
+    tip, end = (418, TOP), (257.5, 527)
     btip, bend = (416, 200), (222, TIE[0] + 8)
-    upper = f'<path fill="{FOLD}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}H100Z"/>'
+    upper = f'<path fill="{FOLD}" d="M100,{TOP}H{tip[0]}{c(tip, end, INNER, log, "Innenkante")}L256,532H100Z"/>'
     band = f'<path fill="{RED}" d="M100,{TOP}H{btip[0]}V{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
     folds = ''
     for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (203, TIE[0] + 8), (212, TIE[0] + 8)),
@@ -107,18 +110,16 @@ def build(RED, FOLD):
         folds += f'<path fill="{FOLD}" d="M{tp[0]},{tp[1]}{c(tp, e2, r, log, name + " rechts")}' \
                  f'L{e1[0]},{e1[1]}{c(e1, tp, l[::-1], log, name + " links")}Z"/>'
     # Raffhalter
-    b0, b1, b2, b3 = (150, 510), (258, 527), (254, 561), (150, 566)
-    tie = (f'<path fill="{FOLD}" d="M{b0[0]},{b0[1]}{c(b0, b1, BAND_TOP, log, "Raffhalter oben")}'
-           f'L{b2[0]},{b2[1]}{c(b2, b3, BAND_BOT, log, "Raffhalter unten")}Z"/>')
-    # Knoten von Hand (zu wenig Messpunkte für eine stabile Anpassung): Oberkante leicht gewölbt,
-    # rechte Seite oben gerade, unten eingeschnürt, Unterkante fällt nach links ab
-    tie += (f'<path fill="{RED}" d="M{KNOT_X},528Q240,524 257,526C256.5,538 253,549 252.5,553'
-            f'Q254,557 254,561Q238,561 {KNOT_X},564Z"/>')
+    # Band: Oberkante als ein Bogen bis unter den Knoten, rechts verdeckt der Knoten, Unterkante durchhängend
+    b0, b1, bl = (150, 511), (232, 527), KNOT['bl']
+    tie = (f'<path fill="{FOLD}" d="M{b0[0]},{b0[1]}{c(b0, b1, BAND_TOP, log, "Band oben")}'
+           f'L240,527L240,560L{bl[0]},{bl[1]}{c(bl, (150, 562), BAND_BOT, log, "Band unten")}Z"/>')
+    tie += knot(RED)
     # unterer Teil
-    lo0, lo1 = (254, TIE[1] - 5), (323, 800)
-    lower = f'<path fill="{RED}" d="M100,{lo0[1]}H{lo0[0]}{c(lo0, lo1, LOW_R, log, "unten Kante")}H100Z"/>'
-    for name, l, r, a0, a1, b0, b1 in (('unten A', LA_L, LA_R, (199, TIE[1] - 6), (226, 720), (211, TIE[1] - 6), (238, 720)),
-                                       ('unten B', LB_L, LB_R, (228, TIE[1] - 6), (272, 790), (241, TIE[1] - 6), (286, 790))):
+    lo0, lo1 = KNOT['br'], (323, 800)
+    lower = f'<path fill="{RED}" d="M100,540H246L{lo0[0]},{lo0[1]}{c(lo0, lo1, LOW_R, log, "unten Kante")}H100Z"/>'
+    for name, l, r, a0, a1, b0, b1 in (('unten A', LA_L, LA_R, (197, 545), (226, 720), (209, 545), (238, 720)),
+                                       ('unten B', LB_L, LB_R, (229, 545), (272, 790), (242, 545), (286, 790))):
         lower += f'<path fill="{FOLD}" d="M{a0[0]},{a0[1]}{c(a0, a1, l, log, name + " links")}' \
                  f'L{b1[0]},{b1[1]}{c(b1, b0, r[::-1], log, name + " rechts")}Z"/>'
     side = upper + band + folds + lower + tie
@@ -128,3 +129,14 @@ def build(RED, FOLD):
 def _rev_sym(p0, pts, log, name):
     c1, c2, err = fit_sym(p0, pts); log.append((name, err))
     return f'L{1024 - p0[0]},{p0[1]}C{c2[0]:.1f},{c2[1]:.1f} {c1[0]:.1f},{c1[1]:.1f} {p0[0]},{p0[1]}'
+
+
+def knot(fill):
+    """Knoten: Oberkante gerade, rechte Seite leicht nach innen gezogen bis zur Einschnürung,
+    Unterkante als flacher Bogen, linke Kante gerade; Ecken mit Radius r gerundet."""
+    tl, tr, br, bl, r = KNOT['tl'], KNOT['tr'], KNOT['br'], KNOT['bl'], KNOT['r']
+    return (f'<path fill="{fill}" d="M{tl[0]},{tl[1] + r}Q{tl[0]},{tl[1]} {tl[0] + r},{tl[1]}'
+            f'L{tr[0] - r},{tr[1]}Q{tr[0]},{tr[1]} {tr[0]},{tr[1] + r}'
+            f'C{tr[0]},{tr[1] + 12} {br[0] + 2.5},{br[1] - 8} {br[0]},{br[1]}'
+            f'Q{(br[0] + bl[0]) / 2},{(br[1] + bl[1]) / 2 + 1} {bl[0] + r},{bl[1]}'
+            f'Q{bl[0]},{bl[1]} {bl[0]},{bl[1] - r}Z"/>')
