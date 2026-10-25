@@ -3,7 +3,7 @@
 Ring und Rahmen aus der Konstruktion (ring_geometry.py), R = 456 im 1024er-Raster, Mitte 512|512.
 Vorhang: aus wenigen Bézierkurven konstruiert (vorhang.py), Seitenvorhang an x = 512 gespiegelt.
 Bühnenboden: konstruiert, Bühnenkante + gleichmäßige Dielen.
-Katze: Stufe 1 (konzept/katze/stufe-1-nachgezeichnet.svg).
+Katze: eine Kontur aus Körper Stufe 1 (konzept/katze/stufe-1-nachgezeichnet.svg) und konstruiertem Schwanz.
 """
 import os, re
 import ring_geometry as rg
@@ -24,13 +24,20 @@ PLANK_W, PLANK_PITCH, PLANKS = 11, 36, 3     # Fugen 11 px, gleichmäßig (Origi
 TAIL_UPPER = 'M608,669.5C595,677 570,683 546,685C530,688 518,700 517,715'
 # weißer Saum als Sichel: rechts spitz, Mitte ~5 px, läuft über die Bühnenkante hinaus und endet spitz an der Locke (517|707)
 TAIL_SAUM = (TAIL_UPPER + 'L517.4,707C514,696 526.5,682.5 545,680C569,677.5 594,672.5 608,669.5Z')
-TAIL = (TAIL_UPPER.replace('M608,669.5', 'M624,646L608,669.5') +
-        'C516,730 527,737 537,736.5C549,736 557,731 557,724C557,720 549,714 544,711.5'
-        'C560,709 590,708 606,704C617,701 625,696 630,688L637.5,674C637.5,664 629,652 624,648Z')
+# Katze = EINE Kontur aus Körper und Schwanz (2026-10-25): Der Hüftrand geht ohne Naht und mit gleicher Tangente
+# in die Außenkante des Schwanzes über, statt dass zwei Flächen sich überlappen. Ab der Saumspitze (608|669,5)
+# schließt die Kontur an die Körper-Unterkante (597|673,5) an.
+HIP = 'C623.4,647.5 626,650 630,654.5C634,659 637.5,665 637.5,674'   # Hüftwölbung: tangential aus dem senkrechten Hüftrand (623,5|644), ~45° schräg, dann steil auf die Bühnenkante
+TAIL_OUTLINE = (HIP + 'L630,688C625,696 617,701 606,704C590,708 560,709 544,711.5'
+                'C549,714 557,720 557,724C557,731 549,736 537,736.5C527,737 516,730 517,715'
+                'C518,700 530,688 546,685C570,683 595,677 608,669.5L597,673.5')
 
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
-cat = re.findall(r'<path[^>]*/>', cat)[0]       # nur der Körper, der Schwanz wird neu konstruiert
+body = re.findall(r'<path d="([^"]*)"', cat)[0]   # nur der Körper, der Schwanz wird neu konstruiert
+# Körper ab der Unterkante (597|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, zurück zur Unterkante
+start, hip = body.index('C580.7,674.3'), body.index('C622.9,651.9')
+CAT = 'M597,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z'
 planks = ''.join(f'<rect x="0" y="{EDGE[1] + 25 + i * PLANK_PITCH}" width="1024" height="{PLANK_W}"/>' for i in range(PLANKS))
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <!-- Rohfassung, erzeugt von skripte/rohfassung.py -->
@@ -49,9 +56,8 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <use href="#seitenvorhang"/><use href="#seitenvorhang" transform="matrix(-1 0 0 1 1024 0)"/>
 </g>
 <circle id="rahmen" cx="{C}" cy="{C}" r="{(F_IN + F_OUT) / 2:.1f}" fill="none" stroke="{BLACK}" stroke-width="{F_OUT - F_IN:.1f}"/>
-<g id="katze" fill="{BLACK}">{cat}
-  <path d="{TAIL_SAUM}" fill="#fff"/>
-  <path d="{TAIL}"/></g>
+<g id="katze"><path d="{CAT}" fill="{BLACK}"/>
+  <path d="{TAIL_SAUM}" fill="#fff"/></g>
 </svg>'''
 open(os.path.join(OUT, 'logo-roh.svg'), 'w').write(svg)
 for name, err in log:
