@@ -62,3 +62,12 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 open(os.path.join(OUT, 'logo-roh.svg'), 'w').write(svg)
 for name, err in log:
     print(f'{name:22s} max. Abweichung {err:4.1f} px')
+
+# Nur die Katze (2026-10-25): dieselbe Kontur, der weiße Saum wird ausgespart (transparent statt weiß),
+# damit die Datei auf jedem Hintergrund funktioniert. viewBox = Umriss + 8 px Rand.
+cat_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="428 406 218 339">
+<!-- Katze allein, erzeugt von skripte/rohfassung.py -->
+<defs><mask id="saum"><rect x="0" y="0" width="1024" height="1024" fill="#fff"/><path d="{TAIL_SAUM}" fill="#000"/></mask></defs>
+<path d="{CAT}" fill="{BLACK}" mask="url(#saum)"/>
+</svg>'''
+open(os.path.join(OUT, 'logo-katze.svg'), 'w').write(cat_svg)

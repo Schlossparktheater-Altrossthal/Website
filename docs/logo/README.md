@@ -179,6 +179,10 @@ Offen für den Feinschliff:
 - Offen zur Positionierung: Der Raffhalter liegt bei y = 513–565 (Mitte ≈ 539), die waagerechte Ringfuge bei y ≈ 521. Prüfen, ob beide aufeinander ausgerichtet werden sollen. Ebenso, ob Faltenspitzen, Knoten und Bühnenkante auf gemeinsamen Linien liegen sollen.
 - Prüfen, ob Faltenspitzen und Saum noch stärker vereinfacht werden sollen (z. B. gleiche Krümmung für alle Falten).
 
+## Nur Katze (2026-10-25)
+
+`konzept/rohfassung/logo-katze.svg` (aus `rohfassung.py`): dieselbe Katzen-Kontur `CAT` wie im Logo, ohne Ring, Vorhang und Bühne. Der weiße Saum ist per Maske ausgespart (transparent), damit die Datei auf jedem Hintergrund funktioniert. viewBox = Umriss + 8 px Rand, Farbe `#171717`.
+
 ## Varianten (2026-10-25, Konzeptblatt 3)
 
 Einfarbig und Negativ entstehen per Farbzuordnung direkt aus `logo-roh.svg` (`skripte/sheet3.py`): Druckfarbe = Ring, Rahmen, Bühnenkante, Vorhangrot, Fugen, Katze; Papierfarbe = Falten, Boden, Bühne, Schwanz-Saum. So bleiben Falten und Dielen als helle Linien lesbar, ohne eigene Zeichnung.
