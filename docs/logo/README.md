@@ -3,7 +3,7 @@
 Arbeitsordner für die Überarbeitung des Logos (Vorhang mit Katze, darum der Ring).
 Ziel: saubere Konstruktion (Raster, Symmetrien, Farben) festlegen und dann final vektorisieren.
 
-Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Entscheidungen getroffen, nächster Schritt Vektor-Rohfassung.
+Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Katzen-Vereinfachung im Test, nächster Schritt Entscheidung Katzenstufen, dann Vektor-Rohfassung.
 
 ## Ordner
 
@@ -21,6 +21,8 @@ Stand: 2026-10-25 – Konzeptblatt 1 und 2 fertig, Entscheidungen getroffen, nä
 | `konzept/A2-ring-ueberlagerung.svg` | Neuer Ring (rot) über dem jetzigen Logo |
 | `konzept/B2-technische-zeichnung.svg` | Logogrid/technische Zeichnung mit Maßen in R |
 | `konzept/ring-bsz-abgleich.png` | Konstruktion gegen BSZ-Original (96 % Deckung, Rest Randpixel) |
+| `konzept/katze/stufe-*.svg` | Katze in 4 Vereinfachungsstufen (Füllung `currentColor`) |
+| `konzept/katze/groessentest.png` | Alle Stufen in 4 Icon-Aufbauten bei 16–64 px, pixelgenau ×4 vergrößert |
 | `skripte/` | Mess- und Erzeugungsskripte, siehe unten |
 
 ## Messergebnisse
@@ -84,6 +86,39 @@ Hinweise aus den Variantenskizzen:
 - In Einfarbig und Negativ wirkt die Katze allein klein im großen Kreis. Beim Ausarbeiten prüfen, ob dort Bühnenkante oder Vorhang-Umriss mit hinein sollen.
 - Bei 16 px ist die Katze nicht mehr erkennbar. Eventuell braucht es eine eigene 16-px-Fassung (nur Ring + Fläche).
 
+## Katze in kleinen Größen (2026-10-25)
+
+Problem: Im Favicon wirkt die Katze verschmiert. Zwei Ursachen:
+1. Sie ist zu klein. Mit Ring und Rahmen bleiben ihr nur ~40 % der Höhe, bei 32 px also ~13 px.
+2. Sie hat zu feine Details: weißer Spalt zwischen Bein und Bauch (2–3 px im Original), zwei dünne Ohren, kleine Pfoten, dünner Schwanzkringel.
+
+Stufen (`konzept/katze/`):
+
+| Stufe | Inhalt |
+|---|---|
+| 1 nachgezeichnet | wie im Logo, geglättet |
+| 2 reduziert | Spalt gefüllt, ein Ohr, Pfoten verschmolzen, Schwanz dicker |
+| 3 geometrisch | glatte Profil-Silhouette, große Ohren, kurzer dicker Schwanz |
+| 4 Kopf | nur Kopf mit Ohren |
+
+Ergebnis des Größentests (`groessentest.png`):
+- **Aufbau A (Ring + Rahmen + Katze):** Unter 48 px ist die Katze in keiner Stufe erkennbar, der Ring dominiert. Nur für ≥ 64 px sinnvoll.
+- **Aufbau B/C (ohne Ring, Katze groß):** Stufe 3 ist ab 24 px klar erkennbar, Stufe 1/2 erst ab 48 px.
+- **16 px:** Nur Stufe 3 und 4 bleiben als Katze lesbar. Der Schwanz von Stufe 3 verschwindet dabei.
+- **Statusleiste:** Stufe 3 ist am besten, Stufe 2 ab 32 px brauchbar.
+- Stufe 4 (Kopf) wirkt generisch („irgendeine Katze“) und verliert die Verbindung zum Logo.
+
+Vorschlag Größensystem:
+
+| Größe / Einsatz | Fassung |
+|---|---|
+| ≥ 128 px, Druck, Website-Kopf | volles Logo, Katze Stufe 1 |
+| 48–96 px (App-Icon, PWA) | ohne Ring, Rahmen + Vorhangrot oder BSZ-Blau, Katze Stufe 2 oder 3 |
+| 16–32 px (Favicon) | ohne Ring, Katze Stufe 3 möglichst groß |
+| Statusleiste (24 dp) | Stufe 3 weiß |
+
+Offen: Stufe 3 weiter ausarbeiten (Schwanz für 16 px kräftiger, Ohr-Kerbe klarer, Brust/Vorderpfote) und abstimmen, wie nah sie am Original bleiben soll.
+
 ## Nächste Schritte
 
 1. ~~Konzeptblatt 2~~ – erledigt 2026-10-25
@@ -106,6 +141,8 @@ python -I skripte/sheet.py                                               # konze
 python -I skripte/ring_geometry.py                                       # Segmentwinkel der Konstruktion
 python -I skripte/verify_ring.py                                         # konzept/ring-bsz-abgleich.png + Deckung
 python -I skripte/sheet2.py                                              # Konzeptblatt-2-SVGs + konzept-2.html
+python -I skripte/cat_levels.py                                          # konzept/katze/stufe-*.svg
+python -I skripte/size_test.py && node skripte/size_test.cjs "$PW" && python -I skripte/size_sheet.py   # groessentest.png
 PW="$(dirname "$(node -p 'require.resolve("playwright/package.json")')")"
 node skripte/p.cjs "$PW"                                                 # konzeptblatt-1.png/.pdf
 node skripte/p.cjs "$PW" konzept/konzept-2.html konzept/konzeptblatt-2   # konzeptblatt-2.png/.pdf
