@@ -29,16 +29,17 @@ TAIL_SAUM = (TAIL_UPPER + 'L517.4,707C514,696 526.5,682.5 545,680C569,677.5 594,
 # schließt die Kontur an die Körper-Unterkante (597|673,5) an.
 HIP = 'C623.4,647.5 626,650 630,654.5C634,659 637.5,665 637.5,674'   # Hüftwölbung: tangential aus dem senkrechten Hüftrand (623,5|644), ~45° schräg, dann steil auf die Bühnenkante
 # Ecke bei (637,5|674) und Gerade bis (630|688) durch einen tangentialen Bogen ersetzt; Unterkante etwas höher → schlanker
-TAIL_OUTLINE = (HIP + 'C637.5,690 620,699 601,702C584,704.5 560,708 544,711.5'
+TAIL_OUTLINE = (HIP + 'C637.5,690 620,699 601,701C585,702.5 562,704.5 544,711.5'   # Mitte schlanker (~20 px)
                 'C549,714 557,720 557,724C557,731 549,736 537,736.5C527,737 516,730 517,715'
-                'C518,700 530,688 546,685C570,683 595,677 608,669.5C602,671.5 599,673.4 597,673.5')   # weich in die Unterkante, keine Ecke
+                'C518,700 530,688 546,685C570,683 595,677 608,669.5'
+                'C600,672 590,673.4 580,673.6L509,673.5')   # von der Saumspitze tangential in die Bauch-Unterkante, keine Ecke
 
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
 body = re.findall(r'<path d="([^"]*)"', cat)[0]   # nur der Körper, der Schwanz wird neu konstruiert
-# Körper ab der Unterkante (597|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, zurück zur Unterkante
-start, hip = body.index('C580.7,674.3'), body.index('C622.9,651.9')
-CAT = 'M597,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z'
+# Körper ab der Pfote (509|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, über die Saumspitze zurück zur Pfote
+start, hip = body.index('C508.3,673.5'), body.index('C622.9,651.9')
+CAT = 'M509,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z'
 planks = ''.join(f'<rect x="0" y="{EDGE[1] + 25 + i * PLANK_PITCH}" width="1024" height="{PLANK_W}"/>' for i in range(PLANKS))
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <!-- Rohfassung, erzeugt von skripte/rohfassung.py -->
@@ -64,11 +65,10 @@ open(os.path.join(OUT, 'logo-roh.svg'), 'w').write(svg)
 for name, err in log:
     print(f'{name:22s} max. Abweichung {err:4.1f} px')
 
-# Nur die Katze (2026-10-25): dieselbe Kontur, der weiße Saum wird ausgespart (transparent statt weiß),
+# Nur die Katze (2026-10-25): dieselbe Kontur ohne Saum – die Lücke zwischen Bauch und Schwanz ist frei (transparent),
 # damit die Datei auf jedem Hintergrund funktioniert. viewBox = Umriss + 8 px Rand.
 cat_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="428 406 218 339">
 <!-- Katze allein, erzeugt von skripte/rohfassung.py -->
-<defs><mask id="saum"><rect x="0" y="0" width="1024" height="1024" fill="#fff"/><path d="{TAIL_SAUM}" fill="#000"/></mask></defs>
-<path d="{CAT}" fill="{BLACK}" mask="url(#saum)"/>
+<path d="{CAT}" fill="{BLACK}"/>
 </svg>'''
 open(os.path.join(OUT, 'logo-katze.svg'), 'w').write(cat_svg)
