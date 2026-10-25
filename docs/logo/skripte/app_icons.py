@@ -15,7 +15,7 @@ HEAD = re.search(r'<path d="([^"]*)"', open(os.path.join(ROH, 'logo-katze-kopf.s
 RED, BLACK = '#E84820', '#171717'
 
 
-CAT_ZOOM = 1.4
+CAT_ZOOM = 1.25   # User-Wahl aus 1,25 / 1,4 / 1,55
 ZOOMED = logo.replace('<g id="katze">', f'<g id="katze" transform="translate(526 673) scale({CAT_ZOOM}) translate(-526 -673)">', 1)
 LOGO_BODY = re.sub(r'^.*?<svg[^>]*>|</svg>\s*$', '', ZOOMED, flags=re.S)
 
