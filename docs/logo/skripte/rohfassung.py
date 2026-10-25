@@ -37,9 +37,18 @@ TAIL_OUTLINE = (HIP + 'C637.5,690 620,699 601,701C585,702.5 562,704.5 544,711.5'
 valance, side, log = vorhang.build(RED, FOLD)
 cat = open(os.path.join(here, '..', 'konzept', 'katze', 'stufe-1-nachgezeichnet.svg')).read()
 body = re.findall(r'<path d="([^"]*)"', cat)[0]   # nur der Körper, der Schwanz wird neu konstruiert
+# Ohren (2026-10-25, nach Vorlage des Users): hinteres Ohr als schmale Spitze, vorderes Ohr spitz mit fast gerader
+# Vorderkante und leicht gewölbter Rückseite; zwischen hinterem Ohr und Kopf ein schmaler weißer Schlitz (Loch, Gegenrichtung).
+a, b = body.index('C468.2,437.7'), body.index('C503.1,440.8')
+EARS = ('C466.6,435 464.6,426 463.6,419.2'          # hinteres Ohr: Vorderkante bis zur Spitze
+        'C467.2,421 470.9,424.2 474.1,427.6'          # Hinterkante in die Kerbe vor dem vorderen Ohr
+        'C474.8,421.8 475.6,417 476.4,412.6'          # vorderes Ohr: Vorderkante bis zur Spitze
+        'C482.2,415.4 487.4,420.6 491,426.6C493.6,431 495.6,435.4 499,437.5')   # Rückseite leicht gewölbt in den Hinterkopf
+body = body[:a] + EARS + body[b:]
+EAR_SLIT = 'M474,429.6C471.5,430.2 468.8,432.3 467,435.3C469.4,433.2 471.6,431.3 474,429.6Z'
 # Körper ab der Pfote (509|673,5) bis zum Hüftrand (623,5|644), dann Schwanz, über die Saumspitze zurück zur Pfote
 start, hip = body.index('C508.3,673.5'), body.index('C622.9,651.9')
-CAT = 'M509,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z'
+CAT = 'M509,673.5' + body[start:hip] + TAIL_OUTLINE + 'Z' + EAR_SLIT
 planks = ''.join(f'<rect x="0" y="{EDGE[1] + 25 + i * PLANK_PITCH}" width="1024" height="{PLANK_W}"/>' for i in range(PLANKS))
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <!-- Rohfassung, erzeugt von skripte/rohfassung.py -->
@@ -76,7 +85,7 @@ open(os.path.join(OUT, 'logo-katze.svg'), 'w').write(cat_svg)
 # Nur der Kopf (2026-10-25): Körperkontur vom Hals vorn (462,5|535) über Kinn, Ohren und Hinterkopf bis zum
 # Nacken (536,5|472), unten ein leicht gewölbter Halsabschluss. viewBox = Umriss + 8 px Rand.
 a, b = body.index('C463.8,528.5'), body.index('C539.0,478.5')
-HEAD = 'M462.5,535.0' + body[a:b] + 'C540,482 522,532 462.5,535.0Z'   # tangential aus dem Nacken, runder Abschluss
+HEAD = 'M462.5,535.0' + body[a:b] + 'C540,482 522,532 462.5,535.0Z' + EAR_SLIT   # tangential aus dem Nacken, runder Abschluss
 open(os.path.join(OUT, 'logo-katze-kopf.svg'), 'w').write(f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="428 406 120 140">
 <!-- Katzenkopf allein, erzeugt von skripte/rohfassung.py -->
 <path d="{HEAD}" fill="{BLACK}"/>
