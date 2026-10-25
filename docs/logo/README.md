@@ -156,14 +156,14 @@ Aufbau von unten nach oben, alles im 1024er-Raster (R = 456, Mitte 512|512):
 | Seitenvorhang | linke Hälfte, per `<use>` an x = 512 gespiegelt: Silhouette dunkel (eine Außenkante), helle Fläche bis zur linken Saumkante, 2 Falten, unterer Teil mit 2 Falten, Raffhalter-Band, Knoten |
 | Rahmen | Kreisring 0,750–0,794 R |
 | Katze | Körper Stufe 1 (`konzept/katze/stufe-1-nachgezeichnet.svg`), Schwanz neu konstruiert (siehe unten) |
-| Oben | Fläche zwischen Rahmen und Vorhang-Oberkante schwarz; die Vorhangkante läuft außen als Schräge (Steigung 0,34, gemessen) von (418\|186) zum Rahmen |
+| Oben | Abweichung vom Original (Entscheidung 2026-10-25): Vorhangrot füllt den Kreis bis zum Rahmen, der Bühnenkreis schneidet rund ab. Im Original ist dort eine schwarze Fläche mit gerader Kante |
 
 Vorhang mit einfachen Mitteln (2026-10-25): Die erste Fassung war Pixel-Nachzeichnung (wellige Kanten, viele Knoten, schlechte Deckung) und ist verworfen. Jetzt ist **jede Kante genau eine kubische Bézierkurve** mit festen Endpunkten. Außenkanten sind Geraden, die der Bühnenkreis abschneidet. Die Kontrollpunkte werden per Least-Squares an Messpunkte aus dem Original angepasst (Messpunkte stehen in `vorhang.py`).
 - Abweichung je Kurve zu den Messpunkten: höchstens 1,5 px (1024er).
 - Flächenvergleich Vorhang links (`skripte/abgleich_vorhang.py`): 6,4 % Fehlpixel, fast nur 1-px-Kantensaum des Originals.
 - `konzept/rohfassung/abgleich-vorhang.png`: Original | Rohfassung mit Original-Kanten (cyan) | Abweichungen schwarz.
 
-Schwanz (2026-10-25, `TAIL` in `rohfassung.py`): Fläche aus 8 Bézierkurven nach gemessenen Kanten. Er wächst aus der Hüfte (füllt die in Stufe 1 ausgeschnittene Hüftwölbung bis x ≈ 625), läuft über die Bühnenkante nach links, wird dünner (22 → 14 px) und endet in einer runden Locke (unten y 736, links x 517). Von rechts greift eine spitze Kerbe bis (544|711,5) hinein. Ein weißer Saum von 4 px trennt die Oberkante vom Körper, nur oberhalb der Bodenfläche. Vergleich: `abgleich-schwanz.png`, `abgleich-boden.png`, `abgleich-oben.png`.
+Schwanz (2026-10-25, `TAIL` in `rohfassung.py`): Fläche aus 8 Bézierkurven nach gemessenen Kanten. Er wächst aus der Hüfte: die Hüftwölbung ist der Schwanzansatz und knickt bei (624|648) mit ~45° nach außen ab, dann steil auf die Bühnenkante bei (637,5|674). Er läuft über die Bühnenkante nach links, wird dünner (22 → 14 px) und endet in einer runden Locke (unten y 736, links x 517). Von rechts greift eine spitze Kerbe bis (544|711,5) hinein. Ein weißer Saum als Sichel (rechts spitz, Mitte ~5 px) trennt die Oberkante vom Körper, nur oberhalb der Bodenfläche. Die Vorhang-Innenkante endet genau an der oberen rechten Knotenecke (256|526,5), sonst steht dort eine kleine Ecke über. Vergleich: `abgleich-schwanz.png`, `abgleich-boden.png`, `abgleich-oben.png`.
 
 Offen für den Feinschliff:
 - Raffhalter (2026-10-25, 4. Fassung): Hell/Dunkel-Kanten subpixelgenau aus dem Grünkanal gemessen (hell G ≈ 72, dunkel G ≈ 10, Kante bei 50 %), Messpunkte bis y = 522 in `vorhang.py`.

@@ -47,7 +47,8 @@ def xy(d):   # {x: y} → [(x, y)]
 
 
 # --- Messpunkte -----------------------------------------------------------------
-TOP = 186                                   # Oberkante Vorhang/Schabracke
+TOP = 186                                   # Ecke, an der Saum und Innenkante oben beginnen
+FILL_TOP = 150                              # Vorhang reicht oben bis über den Rahmen, der Bühnenkreis schneidet rund ab
 VAL_BOTTOM = xy({408: 301, 416: 309, 424: 315, 432: 320, 440: 325, 448: 330, 456: 334, 464: 337,
                  472: 340, 480: 342, 488: 344, 496: 345, 504: 346, 512: 346})
 SWAG1_TOP = xy({416: 227, 424: 233, 432: 237, 440: 241, 448: 245, 456: 248, 464: 250, 472: 252, 480: 253, 496: 256, 512: 257})
@@ -99,7 +100,7 @@ def build(RED, FOLD):
     # Schabracke (ganz, symmetrisch): Fläche + zwei sichelförmige Faltenbänder
     v0 = (400, 292)
     c1, c2, e = fit_sym(v0, VAL_BOTTOM); log.append(('Schabracke unten', e))
-    val = f'<path fill="{RED}" d="M{v0[0]},{TOP}H{1024 - v0[0]}V{v0[1]}C{c2[0]:.1f},{c2[1]:.1f} {c1[0]:.1f},{c1[1]:.1f} {v0[0]},{v0[1]}Z"/>'
+    val = f'<path fill="{RED}" d="M{v0[0]},{FILL_TOP}H{1024 - v0[0]}V{v0[1]}C{c2[0]:.1f},{c2[1]:.1f} {c1[0]:.1f},{c1[1]:.1f} {v0[0]},{v0[1]}Z"/>'
     s1, s2 = (410, 220), (406, 260)
     swag1 = f'<path fill="{FOLD}" d="M{s1[0]},{s1[1]}{cs(s1, SWAG1_TOP, log, "Falte 1 oben")}' \
             f'L{1024 - s1[0]},{s1[1]}' + _rev_sym(s1, SWAG1_BOT, log, 'Falte 1 unten') + 'Z"/>'
@@ -107,12 +108,12 @@ def build(RED, FOLD):
             + _rev_sym(s2, SWAG2_BOT, log, 'Falte 2 unten') + 'Z"/>'
     # Seitenvorhang links oben: außen nur Gerade, der Bühnenkreis schneidet ab
     # Silhouette dunkel (eine einzige Außenkante), helle Fläche darüber endet an der linken Saumkante
-    tip, end = (418, TOP), (257.5, 527)
-    # Oberkante außen: Schräge von der Ecke (418|186) zum Rahmen (gemessen (390|195), (410|188)), Steigung 0,34
+    tip, end = (418, TOP), (256, 526.5)   # endet genau an der Knotenecke oben rechts
+    # oben: Vorhangrot bis zum Rahmen (statt schwarzer Fläche mit gerader Kante wie im Original)
     btip, bend = (414, 214), (217.2, 526)
-    top_out = f'M100,{TOP + (418 - 100) * 0.34:.1f}L418,{TOP}'
-    upper = f'<path fill="{FOLD}" d="{top_out}{c(tip, end, INNER, log, "Innenkante")}L256,532H100Z"/>'
-    band = f'<path fill="{RED}" d="{top_out}H421L{btip[0]},{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
+    top_out = f'M100,{FILL_TOP}H418V{TOP}'
+    upper = f'<path fill="{FOLD}" d="{top_out}{c(tip, end, INNER, log, "Innenkante")}L250,532H100Z"/>'
+    band = f'<path fill="{RED}" d="M100,{FILL_TOP}H421V{TOP}L{btip[0]},{btip[1]}{c(btip, bend, BAND_L, log, "Saum links")}H100Z"/>'
     folds = ''
     for name, tp, l, r, e1, e2 in (('Falte A', (339, 274), F2_L, F2_R, (204.5, 526), (211, 526)),
                                    ('Falte B', (277, 316), F3_L, F3_R, (185.6, 526), (185.7, 526))):
