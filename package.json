@@ -13,9 +13,9 @@
       "mysql2": "3.24.4",
       "browserslist": "4.28.7",
       "nanoid": "3.3.18",
-      "fast-uri": "3.1.8",
+      "fast-uri": "3.1.9",
       "js-yaml": "4.3.2",
-      "undici": "7.30.0",
+      "undici": "7.30.1",
       "deepmerge-ts": "8.0.2",
       "follow-redirects": "^1.16.1",
       "baseline-browser-mapping": "2.11.26",
@@ -24,7 +24,8 @@
       "brace-expansion@2": "2.1.7",
       "brace-expansion@5": "5.0.12",
       "tmp": "0.2.7",
-      "uuid": "11.1.1"
+      "uuid": "11.1.1",
+      "serialize-javascript": "7.1.3"
     }
   },
   "scripts": {
@@ -130,7 +131,7 @@
     "next": "16.4.2",
     "next-auth": "5.0.0-beta.32",
     "node-ical": "^0.27.0",
-    "nodemailer": "^10.0.10",
+    "nodemailer": "^10.1.4",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.4.299",
     "pdfkit": "^0.20.2",
@@ -177,7 +178,7 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.0",
     "@types/web-push": "^3.6.4",
-    "@vitest/coverage-v8": "^5",
+    "@vitest/coverage-v8": "^5.0.3",
     "esbuild": "0.28.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.2",
@@ -190,8 +191,8 @@
     "tsx": "^4.23.12",
     "tw-animate-css": "^1.3.8",
     "typescript": "^6",
-    "vite": "8.3.1",
-    "vitest": "^5.0.2",
+    "vite": "8.3.3",
+    "vitest": "^5.0.3",
     "workbox-cli": "7.4.1"
   },
   "browserslist": "> 0.5%, last 2 versions, not dead, not ie 11"
