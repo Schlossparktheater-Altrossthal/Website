@@ -66,47 +66,88 @@ for n in ('katze', 'katze-kopf'):
     save(f'sommertheater-{n}-schwarz', s, (512, 2048))
     save(f'sommertheater-{n}-weiss', s.replace(f'fill="{BLACK}"', 'fill="#fff"'), (512, 2048))
 
-# Platzaufteilung: Schutzraum X = 1/8 Ringdurchmesser (114 px im 1024er-Raster), Proportionen, Mindestgrößen
-X = 114
+# Konstruktion: Radien, Winkel, Fugen, Verhältnisse, Farben – Werte direkt aus ring_geometry.py / rohfassung.py
+import math
+import ring_geometry as rg
+C, R = 512, 456
+EDGE, PLANK_W, PLANK_PITCH = (673, 698), 11, 36
 logo_inner = re.sub(r'^<svg[^>]*>|</svg>\s*$', '', src.strip())
-def dim(x1, y1, x2, y2, label, lx, ly, anchor='middle'):
-    return (f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#C0392B" stroke-width="3" marker-start="url(#pf)" marker-end="url(#pf)"/>'
-            f'<text x="{lx}" y="{ly}" text-anchor="{anchor}" fill="#C0392B" font-size="34" font-weight="600">{label}</text>')
-inner = 512 - 456   # Ring außen 56…968
-blatt = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-80 -80 2160 1200" font-family="Inter, Helvetica, Arial, DejaVu Sans, sans-serif">
-<defs><marker id="pf" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10Z" fill="#C0392B"/></marker>
-<pattern id="schraffur" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" fill="#FBEDEA"/><line x1="0" y1="0" x2="0" y2="16" stroke="#F2C6BE" stroke-width="6"/></pattern></defs>
-<rect x="-80" y="-80" width="2160" height="1200" fill="#fff"/>
-<text x="-40" y="-20" font-size="44" font-weight="700" fill="#171717">Platzaufteilung</text>
-<rect x="{inner - X}" y="{inner - X}" width="{912 + 2 * X}" height="{912 + 2 * X}" fill="url(#schraffur)"/>
-<rect x="{inner}" y="{inner}" width="912" height="912" fill="#fff"/>
-<rect x="{inner - X}" y="{inner - X}" width="{912 + 2 * X}" height="{912 + 2 * X}" fill="none" stroke="#C0392B" stroke-width="3" stroke-dasharray="14 10"/>
-<g>{logo_inner}</g>
-{dim(inner - X, 512, inner, 512, 'X', inner - X / 2, 495)}
-{dim(512, inner - X, 512, inner, 'X', 530, inner - X / 2 + 12, 'start')}
-{dim(inner, 1010, 968, 1010, 'Ring ⌀ = 8 X', 512, 1060)}
-<g font-size="34" fill="#171717">
-<text x="1200" y="60" font-size="40" font-weight="700">Schutzraum</text>
-<text x="1200" y="110">Rund um das Logo bleibt mindestens X frei</text>
-<text x="1200" y="152">(X = ⅛ des Ringdurchmessers). Keine Schrift,</text>
-<text x="1200" y="194">Bilder oder Kanten in der schraffierten Zone.</text>
-<text x="1200" y="290" font-size="40" font-weight="700">Aufbau (Radius R = 4 X)</text>
-<text x="1200" y="340">Ring außen R, innen 0,891 R – 6 Segmente</text>
-<text x="1200" y="382">Rahmen 0,750 – 0,794 R (schwarz)</text>
-<text x="1200" y="424">Bühne: Vorhang gespiegelt, Katze mittig</text>
-<text x="1200" y="466">Ohne Ring: Ausschnitt = Rahmen außen</text>
-<text x="1200" y="562" font-size="40" font-weight="700">Mindestgrößen</text>
-<text x="1200" y="612">Logo mit Ring: ab 64 px · 20 mm</text>
-<text x="1200" y="654">Logo ohne Ring: ab 48 px · 15 mm</text>
-<text x="1200" y="696">Katze / Kopf: ab 32 px · 10 mm</text>
-<text x="1200" y="738">Darunter: Symbol (Favicon, App-Icon)</text>
-<text x="1200" y="834" font-size="40" font-weight="700">Farben</text>
-<rect x="1200" y="860" width="56" height="56" fill="#E84820"/><text x="1272" y="900">Vorhangrot #E84820</text>
-<rect x="1200" y="930" width="56" height="56" fill="#004D6B"/><text x="1272" y="970">BSZ-Blau #004D6B</text>
-<rect x="1200" y="1000" width="56" height="56" fill="#171717"/><text x="1272" y="1040">Schwarz #171717</text>
-</g>
+GUIDE, TXT = '#C0392B', '#171717'
+def pol(r, a):
+    t = math.radians(a); return C + r * math.cos(t), C + r * math.sin(t)
+def circ(rr, dash=''):
+    return f'<circle cx="{C}" cy="{C}" r="{rr:.1f}" fill="none" stroke="{GUIDE}" stroke-width="1.6"{dash}/>'
+g = []
+# Hilfskreise
+for k in (1.0, rg.R_IN, 0.794, 0.750):
+    g.append(circ(k * R, ' stroke-dasharray="6 5"'))
+# Mittelachsen
+g.append(f'<path d="M{C},20V1004M20,{C}H1004" stroke="{GUIDE}" stroke-width="1" stroke-dasharray="2 6"/>')
+# Fugen-Mittellinien + Winkel zur Senkrechten
+for ga in rg.GAP_ANGLES:
+    x1, y1 = pol(0, ga); x2, y2 = pol(1.06 * R, ga)
+    g.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{GUIDE}" stroke-width="1.6" stroke-dasharray="10 6"/>')
+    lx, ly = pol(1.11 * R, ga)
+    g.append(f'<text x="{lx:.1f}" y="{ly + 10:.1f}" text-anchor="middle" font-size="26" font-weight="700" fill="{GUIDE}">' + f'{abs(ga - 270):.2f}°'.replace('.', ',') + '</text>')
+# Segmentwinkel an der Ringmitte
+rm = (1 + rg.R_IN) / 2 * R
+edges_top = rg.BAND_OFFSET - rg.BAND / 2
+spans = rg.spans()
+starts = [rg._band_edge(edges_top, (1 + rg.R_IN) / 2, True)]
+for ga in rg.GAP_ANGLES:
+    starts.append(rg._radial_edge(ga, +1, (1 + rg.R_IN) / 2))
+for st, sp in zip(starts, spans):
+    mx, my = pol(rm, st + sp / 2)
+    g.append(f'<text x="{mx:.1f}" y="{my + 9:.1f}" text-anchor="middle" font-size="24" font-weight="700" fill="#fff" stroke="#171717" stroke-width="5" paint-order="stroke">' + f'{sp:.1f}°'.replace('.', ',') + '</text>')
+# Querband (waagerechte Fuge)
+yb = C + rg.BAND_OFFSET * R
+g.append(f'<line x1="20" y1="{yb:.1f}" x2="1004" y2="{yb:.1f}" stroke="{GUIDE}" stroke-width="1.6" stroke-dasharray="10 6"/>')
+# Bühnenkante + Dielen
+for y in (EDGE[0], EDGE[1]):
+    g.append(f'<line x1="150" y1="{y}" x2="874" y2="{y}" stroke="{GUIDE}" stroke-width="1.2" stroke-dasharray="4 4"/>')
+guides = ''.join(g)
+
+def mm(v):   # Anteil von R, deutsch formatiert
+    return f'{v:.3f}'.replace('.', ',') + ' R'
+rows = [
+    ('Ring', ''),
+    ('Außenradius', '1,000 R'),
+    ('Innenradius', mm(rg.R_IN)),
+    ('Ringbreite', mm(1 - rg.R_IN)),
+    ('Fugenbreite oben (parallel)', mm(rg.GAP)),
+    ('Querfuge, Breite', mm(rg.BAND)),
+    ('Querfuge, unter Mitte', mm(rg.BAND_OFFSET)),
+    ('Fugen zur Senkrechten', '±19,56° · ±56,14°'),
+    ('Segmente oben (Ringmitte)', ' / '.join(f'{s:.1f}'.replace('.', ',') for s in spans) + '°'),
+    ('Bühne', ''),
+    ('Rahmen außen / innen', mm(0.794) + ' / ' + mm(0.750)),
+    ('Rahmenbreite', mm(0.044)),
+    ('Bühnenkante (Oberkante, unter Mitte)', mm((EDGE[0] - C) / R)),
+    ('Bühnenkante, Höhe', mm((EDGE[1] - EDGE[0]) / R)),
+    ('Dielenfugen: Breite / Abstand', mm(PLANK_W / R) + ' / ' + mm(PLANK_PITCH / R)),
+    ('Katze: Höhe', mm((674 - 414) / R)),
+    ('Vorhang', 'linke Hälfte, an der Senkrechten gespiegelt'),
+]
+y = 40; tx = []
+for k, v in rows:
+    if not v:
+        y += 26; tx.append(f'<text x="1160" y="{y}" font-size="34" font-weight="700" fill="{TXT}">{k}</text>'); y += 46
+    else:
+        tx.append(f'<text x="1160" y="{y}" font-size="25" fill="#555">{k}</text><text x="2040" y="{y}" font-size="25" font-weight="600" fill="{TXT}" text-anchor="end">{v}</text>'); y += 38
+y += 30
+tx.append(f'<text x="1160" y="{y}" font-size="34" font-weight="700" fill="{TXT}">Farben</text>'); y += 26
+cols = [('Gelb', '#FFDD00'), ('Ocker', '#C7A100'), ('Braun', '#744A27'), ('Dunkelgrün', '#015824'), ('Grün', '#09783A'), ('BSZ-Blau', '#004D6B'),
+        ('Vorhangrot', '#E84820'), ('Faltenrot', '#A00A0A'), ('Boden', '#D2924D'), ('Dielenfuge', '#3C1B00'), ('Schwarz', '#171717'), ('Weiß', '#FFFFFF')]
+for i, (n, c) in enumerate(cols):
+    cx, cy = 1160 + (i % 3) * 300, y + (i // 3) * 64
+    tx.append(f'<rect x="{cx}" y="{cy}" width="44" height="44" rx="6" fill="{c}" stroke="#ccc"/><text x="{cx + 56}" y="{cy + 20}" font-size="22" fill="{TXT}">{n}</text><text x="{cx + 56}" y="{cy + 42}" font-size="20" fill="#555">{c}</text>')
+H = y + 4 * 64 + 20
+blatt = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2080 {max(H, 1080)}" font-family="Inter, Helvetica, Arial, DejaVu Sans, sans-serif">
+<rect width="2080" height="{max(H, 1080)}" fill="#fff"/>
+<g transform="translate(40 40)"><g opacity="0.55">{logo_inner}</g>{guides}</g>
+{''.join(tx)}
 </svg>'''
-save("sommertheater-logo-platzaufteilung", blatt, (2160,))
+save('sommertheater-logo-konstruktion', blatt, (2080,))
 
 for extra in ('sommertheater-symbol-blau.svg', 'sommertheater-symbol-rot.svg', 'sommertheater-symbol-schwarz.svg',
               'sommertheater-symbol-blau-512.png', 'sommertheater-symbol-rot-512.png', 'sommertheater-app-icon.svg', 'sommertheater-app-icon-512.png'):
