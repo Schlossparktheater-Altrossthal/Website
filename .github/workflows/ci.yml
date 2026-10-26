@@ -84,7 +84,7 @@ jobs:
           NODE_ENV: test
         run: pnpm exec vitest run --coverage
       - name: SonarQube Cloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
