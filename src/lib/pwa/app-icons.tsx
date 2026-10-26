@@ -7,7 +7,7 @@ import { ImageResponse } from "next/og";
 export const PWA_BACKGROUND_COLOR = "#0f1115";
 
 /**
- * App-Icon = roter Hintergrund, Katze, bunter Ring (docs/logo/skripte/app_icons.py, 2026-10-25).
+ * App-Icon = roter Hintergrund, Katze, bunter Ring (Repo Logo, skripte/app_icons.py, 2026-10-25).
  * Die PNGs sind randlos; maskable hat Ring und Katze in der sicheren Zone (Android schneidet bis zu 20 % weg).
  */
 export const PWA_ICON_VARIANTS = {
