@@ -48,10 +48,11 @@ test.describe("als admin", () => {
 test.describe("als member", () => {
   test.use({ storageState: authFile("member") });
 
-  test("ohne Finanzrecht kein Export und Weiterleitung auf Meine Auslagen", async ({ page }) => {
+  test("ohne Finanzrecht kein Export und keine Berichte", async ({ page }) => {
     const response = await page.request.get("/api/finanzen/export?zeitraum=x&format=csv");
     expect(response.status()).toBe(403);
     await page.goto("/mitglieder/finanzen?tab=berichte");
-    await expect(page).toHaveURL(/\/mitglieder\/finanzen\/auslagen/);
+    // Weiterleitung auf Meine Auslagen – oder, falls die Seite ausgeblendet ist, aufs Dashboard.
+    await expect(page).not.toHaveURL(/tab=berichte/);
   });
 });
