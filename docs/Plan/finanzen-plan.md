@@ -1,6 +1,6 @@
 # Plan: Finanzen neu – Auslagen, Budget, Einnahmen, Kassenbuch
 
-Stand: 2026-10-23. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1–4 umgesetzt, offen Phase 5–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
+Stand: 2026-10-26. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1–6 umgesetzt, offen Phase 7–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
 (`8bf1c77c`) – Konzept und UI damals unbrauchbar, deshalb Neuentwurf statt Wiederherstellung.
 Bündelt [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md) (Phase 1 + 3 + 4),
 [`docs/Plan/gewerke-plan.md`](gewerke-plan.md) Phase 12 (Budget) und die Spenden aus
@@ -25,7 +25,7 @@ Träger ist der Förderverein (siehe Datenschutz-Plan) – Kassenbuch und Kassen
 - Kategorie als Freitext → feste **Kategorien** (Kontenrahmen light) + Gewerk + Produktion.
 - Finanzseite als eigene Insel → Einstieg dort, wo man arbeitet: Gewerk-Portal (Budget-Tab), Dashboard („Auslage einreichen“), Kartenbüro.
 
-## Zielbild (umgesetzt, Stand Phase 4)
+## Zielbild (umgesetzt, Stand Phase 6)
 
 Schema in `prisma/schema.prisma` (Migrationen `20261023180000_finance_rebuild`,
 `20261023200000_finance_receipts_payout`):
@@ -45,18 +45,20 @@ ExpenseClaim      periodId, submittedById, amountCents, spentOn, purpose, vendor
                   departmentChecked*, reviewed*, rejectReason, fundId?, entryId?
 FinanceReceipt    Bytes in der DB (wie Ausstattungsfotos), entryId? | claimId?, ocr Json? (leer)
 FinanceLog        Protokoll je Buchung/Auslage (action, data)
+CashCount         Kassensturz je Vorstellung: eventId, fundId, countedCents, expectedCents, notes, entryId?
+                  (Migration 20261026120000_finance_cash_count)
 ```
 
 - Beträge immer positive Cent-Integer, Richtung über `type`. Löschen von Buchungen gibt es nicht.
 - **Festschreiben** je Zeitraum bis zu einer Buchungsnummer (`lockedThrough`), danach nur Storno.
 - Zahlungsdaten für Erstattungen kommen aus den **bestehenden Profilfeldern** `User.payout*`
   (IBAN, Kontoinhaber, PayPal) – Abweichung vom Entwurf: dort noch **unverschlüsselt** (offen).
-- `CashCount` (Kassensturz) ist noch nicht angelegt → Phase 5.
 
 ## Code-Überblick
 
 - `src/lib/finance/`: `ledger.ts` (Buchen mit Nummernkreis, Ändern, Storno, Festschreiben, Salden),
-  `periods.ts`, `claims.ts` (Auslagen + Benachrichtigungen), `book.ts` (Kassenbuch-Abfragen,
+  `periods.ts`, `claims.ts` (Auslagen + Benachrichtigungen), `income.ts` (Einnahmen je Vorstellung,
+  Kassensturz), `report.ts` (Kassenbericht, CSV, Belege-ZIP), `book.ts` (Kassenbuch-Abfragen,
   Kennzahlen `summarize`), `budgets.ts` (Soll/Ist), `access.ts`, `receipts.ts`, `constants.ts`, `paths.ts`.
 - `src/lib/format/money.ts` (Cent formatieren/parsen, gemeinsam mit Ausstattung).
 - Seiten: `src/app/(members)/mitglieder/finanzen/` (`page.tsx` Tabs Eingang/Kassenbuch/Budgets/Töpfe,
@@ -143,7 +145,7 @@ Mockup: `docs/Plan/mockups/finanzen-mockup.html` (2026-10-23). Vor UI-Umsetzung 
 - [x] Phase 2 Auslagen (2026-10-23): Einreichen mobil, Meine Auslagen, Gewerk-Prüfung, Kassenwart-Eingang, Erstatten/Spende → Buchung, Töpfe-Tab; Zahlungsdaten aus dem Profil (vorhandene Felder, PayPal als Weg ergänzt), Belege als Bytes in der DB
 - [x] Phase 3 Kassenbuch (2026-10-23): Tab Kassenbuch mit Zeitraum-/Topf-/Art-/Kategorie-/Gewerk-Filter und Suche, Kennzahlen (Stornos verrechnet), Buchen/Bearbeiten/Umbuchen mit Belegen und Spender-Feldern, Storno und Festschreiben im Detail-Sheet
 - [x] Phase 4 Budgets (2026-10-23): Tab Budgets (Soll je Zeitraum, optional Gewerk/Kategorie/Topf, Ist = passende Ausgaben minus Stornos, offene Auslagen), Baustein „Budget“ im Gewerk-Portal für Leitung/Vertretung und Finanzrechte (Balken, Zu prüfen, Ausgaben, geschätzte Objektkosten)
-- [ ] Phase 5 Einnahmen
-- [ ] Phase 6 Berichte/Export
+- [x] Phase 5 Einnahmen (2026-10-26): Tab Einnahmen je Vorstellung (erwartet aus Kartenbuchung vs. gebucht), Kassensturz → Einnahme Abendkasse (`CashCount`), Vorverkauf buchen, Spende mit Vorstellungsbezug; online im Finanzbereich statt im Einlass (`lib/finance/income.ts`)
+- [x] Phase 6 Berichte/Export (2026-10-26): Tab Berichte, `/api/finanzen/export` PDF-Kassenbericht (Vorlage `kassenbericht`, inkl. Spendenliste), CSV, Belege-ZIP (`lib/finance/report.ts`); Zuwendungsbestätigung selbst noch nicht als Formular
 - [ ] Phase 7 Einkauf
 - [ ] Phase 8 Doku/E2E/Release

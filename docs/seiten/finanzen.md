@@ -11,8 +11,11 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 - `/mitglieder/finanzen/auslagen` – Meine Auslagen (alle Mitglieder); Gewerksleitung und
   Vertretung sehen oben „Zu prüfen“ mit den Auslagen ihres Gewerks.
 - `/mitglieder/finanzen` – Kassenwart/Prüfer: Tabs `Eingang`, `Kassenbuch` (`?tab=kassenbuch`,
-  Filter `zeitraum`, `topf`, `art`, `kategorie`, `gewerk`, `q`) `Budgets` (`?tab=budgets&zeitraum=`) und `Töpfe` (`?tab=toepfe`).
+  Filter `zeitraum`, `topf`, `art`, `kategorie`, `gewerk`, `q`), `Einnahmen` (`?tab=einnahmen&zeitraum=`), `Budgets`
+  (`?tab=budgets&zeitraum=`), `Berichte` (`?tab=berichte&zeitraum=&topf=`) und `Töpfe` (`?tab=toepfe`).
   Ohne Finanzrecht Weiterleitung auf Meine Auslagen.
+- `/api/finanzen/export?zeitraum=&topf=&format=pdf|csv|zip` – Kassenbericht (PDF-Vorlage
+  `kassenbericht`), Kassenbuch als CSV (Semikolon, UTF-8 mit BOM), Belege als ZIP; nur mit Finanzrecht.
 - `/api/finanzen/belege/<id>` – Beleg (Foto/PDF) für Einreicher, Gewerksleitung, Kassenwart, Prüfer.
 
 ## Ablauf Auslage
@@ -36,6 +39,26 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
   Spender + Anschrift bei Kategorie „Spenden“ (für spätere Zuwendungsbestätigung).
 - Detail-Sheet: Bearbeiten (nur nicht festgeschrieben, keine Stornos), Stornieren (Gegenbuchung
   mit neuer Nummer), „Bis hier festschreiben“ (nur vorwärts, nicht rückgängig).
+
+## Einnahmen je Vorstellung
+
+- Tab `Einnahmen` listet die Vorstellungen der Produktion des Zeitraums (`lib/finance/income.ts`).
+  Aus der Kartenbuchung: Abendkasse verkauft (`source box_office`), an der Tür kassiert
+  (Einlass-Aktion „pay“, erkannt an der `ReservationCheckIn`-Zeile „Zahlung“), vorab bezahlt,
+  noch offen. Daneben, was im Kassenbuch mit `performanceEventId` steht (Stornos verrechnet).
+- **Kassensturz** (`CashCount`): gezählt gegen erwartet (Abendkasse + an der Tür kassiert),
+  bucht den gezählten Betrag als Einnahme „Abendkasse“ (`source box_office`), Differenz im
+  Protokoll und als Hinweis auf der Karte. Mehrere Kassenstürze je Vorstellung möglich
+  (z. B. zweite Kasse), Fehler per Storno im Kassenbuch.
+- **Vorverkauf buchen**: noch nicht gebuchte vorab bezahlte Karten als Einnahme „Kartenverkauf“
+  (`source tickets`). **Spende**: mit oder ohne Spender (Spendenkasse), Kategorie „Spenden“.
+- Bewusst online im Finanzbereich, nicht im (offline-fähigen) Einlass.
+
+## Berichte
+
+- Tab `Berichte`: Kennzahlen, Summen nach Kategorie und Gewerk, Downloads. Der PDF-Kassenbericht
+  enthält Übersicht, Töpfe (Zu-/Abfluss inkl. Umbuchungen), Kategorien, Gewerke, Spendenliste
+  (Grundlage für Zuwendungsbestätigungen) und das Kassenbuch mit Stornos (`lib/finance/report.ts`).
 
 ## Budgets
 

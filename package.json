@@ -121,6 +121,7 @@
     "date-fns": "^4.1.0",
     "dexie": "4.4.6",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "framer-motion": "^13.4.1",
     "geist": "^1.5.1",
     "http-proxy": "^1.18.1",

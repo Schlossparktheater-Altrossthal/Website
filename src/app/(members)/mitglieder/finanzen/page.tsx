@@ -3,9 +3,13 @@ import { redirect } from "next/navigation";
 import { ClaimInbox, type PayoutDetails } from "@/components/finance/claim-inbox";
 import { BudgetManager } from "@/components/finance/budget-manager";
 import { CashBook } from "@/components/finance/cash-book";
+import { FinanceReports } from "@/components/finance/finance-reports";
 import { FundManager } from "@/components/finance/fund-manager";
+import { IncomeOverview } from "@/components/finance/income-overview";
 import { loadBook, loadPeriodOptions, summarize } from "@/lib/finance/book";
 import { loadBudgets } from "@/lib/finance/budgets";
+import { loadPerformanceIncome } from "@/lib/finance/income";
+import { loadFinanceReport } from "@/lib/finance/report";
 import type { ClaimView } from "@/lib/finance/claims";
 import { PageHeader } from "@/components/members/page-header";
 import { SectionNav } from "@/components/ui/section-nav";
@@ -21,7 +25,9 @@ export const metadata = { title: "Finanzen" };
 const AREAS = [
   { id: "eingang", label: "Eingang" },
   { id: "kassenbuch", label: "Kassenbuch" },
+  { id: "einnahmen", label: "Einnahmen" },
   { id: "budgets", label: "Budgets" },
+  { id: "berichte", label: "Berichte" },
   { id: "toepfe", label: "Töpfe" },
 ] as const;
 
@@ -37,7 +43,7 @@ type SearchParams = {
 };
 type Area = (typeof AREAS)[number]["id"];
 
-/** Kassenwart: Auslagen-Eingang und Geldtöpfe; Kassenbuch, Budgets, Berichte folgen (docs/Plan/finanzen-plan.md). */
+/** Kassenwart: Auslagen-Eingang, Kassenbuch, Einnahmen je Vorstellung, Budgets, Geldtöpfe (docs/Plan/finanzen-plan.md). */
 export default async function FinancePage({
   searchParams,
 }: {
@@ -82,6 +88,9 @@ export default async function FinancePage({
   const balances = fundBalances(entries);
   const book = area === "kassenbuch" ? await loadCashBook(session.user!.id!, params, claims) : null;
   const budgetData = area === "budgets" ? await loadBudgetTab(session.user!.id!, params) : null;
+  const incomeData = area === "einnahmen" ? await loadIncomeTab(session.user!.id!, params) : null;
+  const reportData =
+    area === "berichte" ? await loadReportTab(session.user!.id!, params, funds) : null;
   const activeFunds = funds
     .filter((fund) => !fund.archivedAt)
     .map((fund) => ({ id: fund.id, name: fund.name }));
@@ -114,6 +123,16 @@ export default async function FinancePage({
         />
       ) : book ? (
         <CashBook {...book} funds={activeFunds} canManage={access.manage} />
+      ) : reportData ? (
+        <FinanceReports {...reportData} funds={activeFunds} />
+      ) : incomeData ? (
+        <IncomeOverview
+          {...incomeData}
+          funds={funds
+            .filter((fund) => !fund.archivedAt)
+            .map((fund) => ({ id: fund.id, name: fund.name, kind: fund.kind }))}
+          canManage={access.manage}
+        />
       ) : budgetData ? (
         <BudgetManager {...budgetData} funds={activeFunds} canManage={access.manage} />
       ) : (
@@ -223,5 +242,38 @@ async function loadBudgetTab(userId: string, params: SearchParams) {
     expenseCents: summarize(entries, null).expenseCents,
     departments,
     categories,
+  };
+}
+
+async function loadIncomeTab(userId: string, params: SearchParams) {
+  const { options, defaultId } = await loadPeriodOptions(userId);
+  const periodId = options.some((option) => option.id === params.zeitraum)
+    ? params.zeitraum!
+    : defaultId;
+  const period = await prisma.financePeriod.findUniqueOrThrow({ where: { id: periodId } });
+  return {
+    periods: options,
+    period: { id: period.id, name: period.name, hasShow: Boolean(period.showId) },
+    performances: period.showId ? await loadPerformanceIncome(period.showId) : [],
+  };
+}
+
+async function loadReportTab(userId: string, params: SearchParams, funds: { id: string }[]) {
+  const { options, defaultId } = await loadPeriodOptions(userId);
+  const periodId = options.some((option) => option.id === params.zeitraum)
+    ? params.zeitraum!
+    : defaultId;
+  const fundId = funds.some((fund) => fund.id === params.topf) ? params.topf! : null;
+  const report = await loadFinanceReport(periodId, fundId);
+  return {
+    periods: options,
+    period: { id: report.period.id, name: report.period.name },
+    fundId,
+    totals: report.totals,
+    byCategory: report.byCategory,
+    byDepartment: report.byDepartment,
+    donationCount: report.donations.length,
+    entryCount: report.entries.length,
+    receiptCount: report.entries.reduce((sum, entry) => sum + entry.receipts.length, 0),
   };
 }

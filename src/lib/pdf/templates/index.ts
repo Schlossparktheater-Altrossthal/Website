@@ -1,6 +1,7 @@
 import type { PdfTemplate } from "../types";
 import { dataPortalTableTemplate } from "./data-portal-table";
 import { doorChecklistTemplate } from "./door-checklist";
+import { kassenberichtTemplate } from "./kassenbericht";
 import { koerpermasseTemplate } from "./koerpermasse";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
@@ -17,6 +18,7 @@ import { scriptReaderPdfTemplate } from "@/lib/skript/pdf";
 const templates = [
   dataPortalTableTemplate,
   doorChecklistTemplate,
+  kassenberichtTemplate,
   koerpermasseTemplate,
   onboardingInviteTemplate,
   onboardingStatisticsTemplate,

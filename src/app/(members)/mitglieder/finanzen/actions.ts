@@ -20,6 +20,7 @@ import {
   reverseEntry,
   updateEntry,
 } from "@/lib/finance/ledger";
+import { bookPresale, recordCashCount, recordDonation } from "@/lib/finance/income";
 import { FINANCE_HOME_PATH } from "@/lib/finance/paths";
 import { readReceiptFiles } from "@/lib/finance/receipts";
 import { parseEuroToCents } from "@/lib/format/money";
@@ -399,5 +400,78 @@ export async function deleteBudgetAction(input: { id: string }): Promise<ActionR
   return run(async () => {
     await requireManage();
     await prisma.financeBudget.delete({ where: { id: id.parse(input.id) } });
+  });
+}
+
+// ── Einnahmen je Vorstellung (Kassenwart) ──────────────────────────────────
+
+const cashCountSchema = z.object({
+  eventId: id,
+  fundId: id,
+  counted: z.string().max(20),
+  notes: z.string().max(1000).optional(),
+});
+
+export async function recordCashCountAction(
+  input: z.input<typeof cashCountSchema>,
+): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    const data = cashCountSchema.parse(input);
+    const countedCents = parseEuroToCents(data.counted);
+    if (countedCents === null) {
+      throw new FinanceError("Bitte den gezählten Betrag angeben, z. B. 612,50.");
+    }
+    await recordCashCount(
+      {
+        eventId: data.eventId,
+        fundId: await activeFund(data.fundId),
+        countedCents,
+        notes: data.notes,
+      },
+      userId,
+    );
+  });
+}
+
+export async function bookPresaleAction(input: {
+  eventId: string;
+  fundId: string;
+}): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    await bookPresale(
+      { eventId: id.parse(input.eventId), fundId: await activeFund(input.fundId) },
+      userId,
+    );
+  });
+}
+
+const donationSchema = z.object({
+  eventId: id,
+  fundId: id,
+  amount: z.string().max(20),
+  donorName: z.string().max(200).optional(),
+  donorAddress: z.string().max(400).optional(),
+});
+
+export async function recordDonationAction(
+  input: z.input<typeof donationSchema>,
+): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    const data = donationSchema.parse(input);
+    const amountCents = parseEuroToCents(data.amount);
+    if (!amountCents) throw new FinanceError("Bitte einen gültigen Betrag angeben, z. B. 50,00.");
+    await recordDonation(
+      {
+        eventId: data.eventId,
+        fundId: await activeFund(data.fundId),
+        amountCents,
+        donorName: data.donorName,
+        donorAddress: data.donorAddress,
+      },
+      userId,
+    );
   });
 }
