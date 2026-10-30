@@ -19,6 +19,7 @@ export const templateItemSchema = z.object({
   anchorType: z.enum(["premiere", "finalRehearsalStart", "milestone", "fixed"]),
   anchorKey: z.string().nullable().optional(),
   offsetDays: z.number().int(),
+  durationDays: z.number().int().min(0).max(365).default(0),
   /** Nur bei `fixed` ohne Premiere: Datum `YYYY-MM-DD` samt Jahrgang zum Verschieben. */
   fixedDate: z.string().nullable().optional(),
   sourceYear: z.number().int().nullable().optional(),
@@ -40,6 +41,7 @@ type SourceMilestone = {
   anchorType: TemplateItem["anchorType"];
   anchorMilestoneId: string | null;
   offsetDays: number;
+  durationDays: number;
   fixedDate: Date | null;
   predecessors: { fromId: string; lagDays: number }[];
 };
@@ -57,6 +59,7 @@ export function buildTemplateItems(
       description: milestone.description,
       kind: milestone.kind,
       departmentSlug: milestone.departmentSlug,
+      durationDays: milestone.durationDays,
       predecessors: milestone.predecessors.flatMap((dep) =>
         keys.has(dep.fromId) ? [{ key: keys.get(dep.fromId) as string, lagDays: dep.lagDays }] : [],
       ),
@@ -100,6 +103,7 @@ export type InstantiatedMilestone = {
   anchorType: TemplateItem["anchorType"];
   anchorKey: string | null;
   offsetDays: number;
+  durationDays: number;
   fixedDate: Date | null;
   predecessors: { key: string; lagDays: number }[];
 };
@@ -136,6 +140,7 @@ export function instantiateTemplate(
       anchorType: item.anchorType === "milestone" && !anchorKey ? "premiere" : item.anchorType,
       anchorKey,
       offsetDays: item.offsetDays,
+      durationDays: item.durationDays,
       fixedDate,
       predecessors: item.predecessors.filter((dep) => keys.has(dep.key) && dep.key !== item.key),
     };
@@ -157,6 +162,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: null,
       anchorType: "premiere",
       offsetDays: -180,
+      durationDays: 30,
       predecessors: [],
     },
     {
@@ -166,6 +172,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: null,
       anchorType: "premiere",
       offsetDays: -120,
+      durationDays: 21,
       predecessors: [],
     },
     {
@@ -175,6 +182,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "werbung-social",
       anchorType: "premiere",
       offsetDays: -60,
+      durationDays: 21,
       predecessors: [{ key: "gema", lagDays: 14 }],
     },
     {
@@ -184,6 +192,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "werbung-social",
       anchorType: "premiere",
       offsetDays: -45,
+      durationDays: 0,
       predecessors: [{ key: "plakat", lagDays: 7 }],
     },
     {
@@ -193,6 +202,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "kostuem",
       anchorType: "finalRehearsalStart",
       offsetDays: -28,
+      durationDays: 0,
       predecessors: [],
     },
     {
@@ -202,6 +212,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "technik",
       anchorType: "finalRehearsalStart",
       offsetDays: -24,
+      durationDays: 14,
       predecessors: [],
     },
     {
@@ -211,6 +222,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "buehnenbild",
       anchorType: "finalRehearsalStart",
       offsetDays: -21,
+      durationDays: 28,
       predecessors: [{ key: "technik", lagDays: 3 }],
     },
     {
@@ -220,6 +232,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "requisite",
       anchorType: "finalRehearsalStart",
       offsetDays: -14,
+      durationDays: 21,
       predecessors: [],
     },
     {
@@ -229,6 +242,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: "buehnenbild",
       anchorType: "finalRehearsalStart",
       offsetDays: -7,
+      durationDays: 0,
       predecessors: [
         { key: "bau", lagDays: 7 },
         { key: "requisiten", lagDays: 0 },
@@ -241,6 +255,7 @@ export const SUGGESTED_TEMPLATE: { id: string; name: string; items: TemplateItem
       departmentSlug: null,
       anchorType: "finalRehearsalStart",
       offsetDays: 0,
+      durationDays: 0,
       predecessors: [
         { key: "bauprobe", lagDays: 3 },
         { key: "anprobe", lagDays: 7 },

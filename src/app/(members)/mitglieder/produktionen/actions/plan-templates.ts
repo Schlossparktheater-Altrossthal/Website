@@ -116,6 +116,7 @@ export async function applyPlanTemplateAction(
             departmentId: entry.departmentId,
             anchorType: entry.anchorType,
             offsetDays: entry.offsetDays,
+            durationDays: entry.durationDays,
             fixedDate: entry.fixedDate,
             position: index,
           },

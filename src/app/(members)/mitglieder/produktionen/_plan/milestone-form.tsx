@@ -49,11 +49,28 @@ type FormState = {
   days: number;
   direction: "before" | "after";
   fixedDate: string;
+  durationDays: number;
   predecessors: { fromId: string; lagDays: number }[];
   mirrorToCalendar: boolean;
 };
 
-function initialState(milestone: PlanMilestone | null): FormState {
+/** Vorbelegung für einen neuen Eintrag, z. B. nach Aufziehen in der Zeitleiste. */
+export type MilestoneDefaults = {
+  departmentId?: string | null;
+  dueDate?: string;
+  durationDays?: number;
+};
+
+function initialState(milestone: PlanMilestone | null, defaults?: MilestoneDefaults): FormState {
+  if (!milestone && defaults?.dueDate) {
+    return {
+      ...initialState(null),
+      departmentId: defaults.departmentId ?? NONE,
+      anchorType: "fixed",
+      fixedDate: defaults.dueDate,
+      durationDays: defaults.durationDays ?? 0,
+    };
+  }
   return {
     title: milestone?.title ?? "",
     description: milestone?.description ?? "",
@@ -64,6 +81,7 @@ function initialState(milestone: PlanMilestone | null): FormState {
     days: Math.abs(milestone?.offsetDays ?? 14),
     direction: (milestone?.offsetDays ?? -1) > 0 ? "after" : "before",
     fixedDate: toDateInput(milestone?.fixedDate ?? milestone?.dueAt ?? null),
+    durationDays: milestone?.durationDays ?? 0,
     predecessors: milestone?.predecessors ?? [],
     mirrorToCalendar: milestone?.mirrored ?? false,
   };
@@ -73,17 +91,19 @@ function initialState(milestone: PlanMilestone | null): FormState {
 export function MilestoneForm({
   plan,
   milestone,
+  defaults,
   pending,
   onSubmit,
   onCancel,
 }: {
   plan: ProductionPlan;
   milestone: PlanMilestone | null;
+  defaults?: MilestoneDefaults;
   pending: boolean;
   onSubmit: (input: MilestoneInput) => void;
   onCancel: () => void;
 }) {
-  const [state, setState] = React.useState(() => initialState(milestone));
+  const [state, setState] = React.useState(() => initialState(milestone, defaults));
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setState((current) => ({ ...current, [key]: value }));
 
@@ -135,6 +155,7 @@ export function MilestoneForm({
       anchorType: state.anchorType,
       anchorMilestoneId: state.anchorMilestoneId === NONE ? null : state.anchorMilestoneId,
       offsetDays,
+      durationDays: state.durationDays,
       fixedDate: state.anchorType === "fixed" ? state.fixedDate || null : null,
       predecessors: state.predecessors.filter((dep) => dep.fromId !== NONE),
       mirrorToCalendar: state.kind === "review" && state.mirrorToCalendar,
@@ -301,6 +322,31 @@ export function MilestoneForm({
           )}
         </p>
       </fieldset>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="milestone-duration">Dauer</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id="milestone-duration"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={365}
+            className="w-24"
+            value={state.durationDays}
+            onChange={(event) =>
+              update("durationDays", Math.min(365, Math.max(0, Number(event.target.value) || 0)))
+            }
+          />
+          <span className="text-sm text-muted-foreground">
+            {state.durationDays === 0
+              ? "Tage – 0 = Termin ohne Dauer"
+              : preview
+                ? `Tage, Beginn ${DAY_FORMAT.format(new Date(preview.getTime() - state.durationDays * 86_400_000))}`
+                : "Tage bis zur Frist"}
+          </span>
+        </div>
+      </div>
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Muss fertig sein nach …</legend>

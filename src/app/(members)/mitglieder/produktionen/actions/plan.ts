@@ -37,6 +37,7 @@ const milestoneSchema = z
     anchorType: z.enum(["premiere", "finalRehearsalStart", "milestone", "fixed"]),
     anchorMilestoneId: z.string().min(1).optional().nullable(),
     offsetDays: z.number().int().min(-1000).max(1000),
+    durationDays: z.number().int().min(0).max(365).default(0),
     fixedDate: dateOnly.optional().nullable(),
     /** Abnahmen (z. B. Bauprobe) als Termin in Kalender, Sperrliste und Abo spiegeln. */
     mirrorToCalendar: z.boolean().default(false),
@@ -182,6 +183,7 @@ export async function saveMilestoneAction(input: MilestoneInput): Promise<Produc
       anchorType: data.anchorType,
       anchorMilestoneId,
       offsetDays: data.anchorType === "fixed" ? 0 : data.offsetDays,
+      durationDays: data.durationDays,
       fixedDate: data.anchorType === "fixed" ? (data.fixedDate ?? null) : null,
     };
 

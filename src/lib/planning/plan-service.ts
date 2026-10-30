@@ -99,6 +99,8 @@ export type PlanMilestone = {
   anchorType: MilestoneAnchor;
   anchorMilestoneId: string | null;
   offsetDays: number;
+  /** Dauer bis zur Frist in Tagen, 0 = Termin. */
+  durationDays: number;
   fixedDate: string | null;
   dueAt: string | null;
   doneAt: string | null;
@@ -324,6 +326,7 @@ export async function loadProductionPlan(
       anchorType: row.anchorType,
       anchorMilestoneId: row.anchorMilestoneId,
       offsetDays: row.offsetDays,
+      durationDays: row.durationDays,
       fixedDate: iso(row.fixedDate),
       dueAt: iso(entry?.dueAt ?? row.dueAt),
       doneAt: iso(row.doneAt),

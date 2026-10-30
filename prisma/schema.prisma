@@ -603,6 +603,8 @@ model ShowMilestone {
   anchorType        MilestoneAnchor             @default(premiere)
   anchorMilestoneId String?
   offsetDays        Int                         @default(0)
+  /// Dauer in Tagen bis zur Frist (Gantt-Balken); 0 = Termin ohne Dauer.
+  durationDays      Int                         @default(0)
   fixedDate         DateTime?
   /// Aus Anker + Offset berechnet und gespeichert.
   dueAt             DateTime?
