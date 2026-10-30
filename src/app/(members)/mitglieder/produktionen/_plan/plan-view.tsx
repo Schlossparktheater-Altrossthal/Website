@@ -31,10 +31,10 @@ import {
 import { PlanAgenda } from "./agenda";
 import { DAY_FORMAT } from "./format";
 import { MilestoneDetail } from "./milestone-detail";
-import { MilestoneForm } from "./milestone-form";
+import { MilestoneForm, type MilestoneDefaults } from "./milestone-form";
 import { PlanCalendar } from "./plan-calendar";
 import { TemplatesPanel, type PlanTemplateSummary } from "./templates-panel";
-import { PlanTimeline, type TimelineMove } from "./timeline";
+import { PlanGantt, type GanttHoliday, type TimelineMove } from "./gantt";
 
 type View = "timeline" | "agenda" | "calendar";
 
@@ -49,6 +49,7 @@ function toInput(milestone: PlanMilestone, showId: string): MilestoneInput {
     anchorType: milestone.anchorType,
     anchorMilestoneId: milestone.anchorMilestoneId,
     offsetDays: milestone.offsetDays,
+    durationDays: milestone.durationDays,
     fixedDate: milestone.fixedDate ? milestone.fixedDate.slice(0, 10) : null,
     predecessors: milestone.predecessors,
     mirrorToCalendar: milestone.mirrored,
@@ -73,8 +74,11 @@ export function PlanView({
   plan,
   templates,
   templateName,
+  holidays = [],
 }: {
   plan: ProductionPlan;
+  /** Schulferien und Feiertage als Tageszahlen für die Zeitleiste. */
+  holidays?: GanttHoliday[];
   templates: PlanTemplateSummary[];
   /** Vorschlag für „Als Vorlage speichern“. */
   templateName: string;
@@ -87,6 +91,7 @@ export function PlanView({
   const [onlyOverdue, setOnlyOverdue] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState<PlanMilestone | "new" | null>(null);
+  const [newDefaults, setNewDefaults] = React.useState<MilestoneDefaults | undefined>();
   const [deleting, setDeleting] = React.useState<PlanMilestone | null>(null);
   const [confirmDone, setConfirmDone] = React.useState<PlanMilestone | null>(null);
   const [move, setMove] = React.useState<TimelineMove | null>(null);
@@ -113,7 +118,45 @@ export function PlanView({
       }
     });
 
-  const handleSelect = (id: string) => setSelectedId(id);
+  const handleSelect = (id: string | null) => setSelectedId(id);
+
+  const moveInput = (target: PlanMilestone, change: TimelineMove) => {
+    const input = toInput(target, plan.showId);
+    if (target.anchorType === "fixed" && target.fixedDate) {
+      input.fixedDate = fromDay(toDay(new Date(target.fixedDate)) + change.deltaDays)
+        .toISOString()
+        .slice(0, 10);
+    } else {
+      input.offsetDays = target.offsetDays + change.deltaDays;
+    }
+    input.durationDays = Math.max(0, target.durationDays + change.durationDelta);
+    return input;
+  };
+
+  // Nur die Dauer geändert: keine Folgeverschiebung, direkt speichern.
+  const handleMove = (change: TimelineMove) => {
+    const target = plan.milestones.find((milestone) => milestone.id === change.id);
+    if (!target) return;
+    if (change.deltaDays === 0) run(() => saveMilestoneAction(moveInput(target, change)));
+    else setMove(change);
+  };
+
+  const handleLink = (fromId: string, toId: string) => {
+    const target = plan.milestones.find((milestone) => milestone.id === toId);
+    if (!target) return;
+    if (target.predecessors.some((dep) => dep.fromId === fromId)) {
+      toast.info("Diese Abhängigkeit gibt es schon.");
+      return;
+    }
+    const input = toInput(target, plan.showId);
+    input.predecessors = [...target.predecessors, { fromId, lagDays: 0 }];
+    run(() => saveMilestoneAction(input));
+  };
+
+  const openNew = (defaults?: MilestoneDefaults) => {
+    setNewDefaults(defaults);
+    setEditing("new");
+  };
 
   // Vorschau der Verschiebung durch Ziehen in der Zeitleiste.
   const moveTarget = move ? plan.milestones.find((milestone) => milestone.id === move.id) : null;
@@ -147,16 +190,8 @@ export function PlanView({
 
   const confirmMove = () => {
     if (!move || !moveTarget) return;
-    const input = toInput(moveTarget, plan.showId);
-    if (moveTarget.anchorType === "fixed" && moveTarget.fixedDate) {
-      input.fixedDate = fromDay(toDay(new Date(moveTarget.fixedDate)) + move.deltaDays)
-        .toISOString()
-        .slice(0, 10);
-    } else {
-      input.offsetDays = moveTarget.offsetDays + move.deltaDays;
-    }
     run(
-      () => saveMilestoneAction(input),
+      () => saveMilestoneAction(moveInput(moveTarget, move)),
       () => setMove(null),
     );
   };
@@ -207,7 +242,7 @@ export function PlanView({
           {plan.canManage ? (
             <div className="flex flex-wrap justify-center gap-2">
               <Button onClick={() => setTemplateMode("apply")}>Vorlage übernehmen</Button>
-              <Button variant="outline" onClick={() => setEditing("new")}>
+              <Button variant="outline" onClick={() => openNew()}>
                 Ersten Meilenstein anlegen
               </Button>
             </div>
@@ -253,6 +288,7 @@ export function PlanView({
             key={editing === "new" ? "new" : editing.id}
             plan={plan}
             milestone={editing === "new" ? null : editing}
+            defaults={editing === "new" ? newDefaults : undefined}
             pending={pending}
             onCancel={() => setEditing(null)}
             onSubmit={(input) =>
@@ -314,7 +350,7 @@ export function PlanView({
         />
         {plan.canManage ? (
           <div className="ml-auto flex items-center gap-2">
-            <Button onClick={() => setEditing("new")}>+ Meilenstein</Button>
+            <Button onClick={() => openNew()}>+ Meilenstein</Button>
             <ActionDropdownMenu
               label="Weitere Aktionen"
               items={[{ label: "Als Vorlage speichern", onSelect: () => setTemplateMode("save") }]}
@@ -332,11 +368,14 @@ export function PlanView({
       >
         <div className="min-w-0">
           {effectiveView === "timeline" ? (
-            <PlanTimeline
+            <PlanGantt
               plan={plan}
+              holidays={holidays}
               selectedId={selectedId}
               onSelect={handleSelect}
-              onMove={plan.canManage ? setMove : undefined}
+              onMove={plan.canManage ? handleMove : undefined}
+              onCreate={plan.canManage ? openNew : undefined}
+              onLink={plan.canManage ? handleLink : undefined}
             />
           ) : effectiveView === "calendar" ? (
             <PlanCalendar plan={plan} onSelect={handleSelect} />

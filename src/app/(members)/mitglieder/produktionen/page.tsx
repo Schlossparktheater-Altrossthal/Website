@@ -4,10 +4,13 @@ import { redirect } from "next/navigation";
 import { ProductionHeader } from "@/components/production/production-header";
 import { Button } from "@/components/ui/button";
 import { getActiveProduction } from "@/lib/active-production";
+import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
 import { canViewPlan, loadProductionPlan } from "@/lib/planning/plan-service";
 import { prisma } from "@/lib/prisma";
+import { toDay } from "@/lib/planning/schedule";
 import { requireAuth } from "@/lib/rbac";
+import { readSperrlisteSettings, resolveBlocklistSettings } from "@/lib/sperrliste-settings";
 
 import { PlanView } from "./_plan/plan-view";
 import type { PlanTemplateSummary } from "./_plan/templates-panel";
@@ -55,13 +58,26 @@ export default async function ProduktionenPage({
     );
   }
 
-  const [plan, storedTemplates] = await Promise.all([
+  const [plan, storedTemplates, holidayRanges] = await Promise.all([
     loadProductionPlan(production.id, session.user),
     prisma.planTemplate.findMany({
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true, items: true },
     }),
+    // Ferien sind nur Orientierung in der Zeitleiste – ohne Quelle bleibt der Plan nutzbar.
+    readSperrlisteSettings()
+      .then((record) => getSaxonySchoolHolidayRanges(resolveBlocklistSettings(record).cacheKey))
+      .catch((error: unknown) => {
+        console.error("ProduktionenPage holidays", error);
+        return [];
+      }),
   ]);
+  const dayOf = (iso: string) => toDay(new Date(`${iso}T00:00:00.000Z`));
+  const holidays = holidayRanges.map((range) => ({
+    start: dayOf(range.startDate),
+    end: dayOf(range.endDate),
+    title: range.title,
+  }));
   const templates: PlanTemplateSummary[] = [
     ...storedTemplates.map((template) => ({
       id: template.id,
@@ -81,7 +97,12 @@ export default async function ProduktionenPage({
     <div className="space-y-6">
       <ProductionHeader production={production} active="plan" canManage={canManage} />
       {plan ? (
-        <PlanView plan={plan} templates={templates} templateName={`Ablauf ${production.year}`} />
+        <PlanView
+          plan={plan}
+          templates={templates}
+          templateName={`Ablauf ${production.year}`}
+          holidays={holidays}
+        />
       ) : null}
     </div>
   );

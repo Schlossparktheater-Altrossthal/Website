@@ -7,7 +7,7 @@ Auswertung der Rückmeldungen.
 
 ## Routen
 
-- `/mitglieder/produktionen` – Tab „Plan“: Kennzahlen, Zeitleiste (ab `md`), Agenda, Kalender; `?verwalten=1` öffnet „Produktionen verwalten“ (Sheet, aus dem Wechsler der Seitenleiste)
+- `/mitglieder/produktionen` – Tab „Plan“: Kennzahlen, Zeitleiste als Gantt (ab `md`: Aufgabenliste nach Gewerk, Balken mit Dauer, Ziehen/Aufziehen/Verknüpfen, Ferien, `docs/Plan/zeitleiste-gantt-plan.md`), Agenda, Kalender; `?verwalten=1` öffnet „Produktionen verwalten“ (Sheet, aus dem Wechsler der Seitenleiste)
 - `/mitglieder/produktionen/gewerke` – Tab „Gewerke“: alle Gewerke mit Kartenfortschritt und nächster Frist
 - `/mitglieder/produktionen/[showId]` – Einstellungen einer Produktion (Premiere, Endprobenwoche, Onboarding)
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte / skript (`&fassung=<id>` Prüfschritt bzw. Fassung; für alle mit `SCRIPT.READ` sichtbar, nur Freigegebenes); `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
@@ -36,7 +36,7 @@ Auswertung der Rückmeldungen.
   `plan.ts`, `plan-templates.ts`, `reminders.ts`)
 - `src/app/(members)/mitglieder/produktionen/production-forms-client.tsx` – Formulare
 - `src/components/production/production-header.tsx` – gemeinsamer Kopf mit Tabs
-- `src/app/(members)/mitglieder/produktionen/_plan/` – Plan (Zeitleiste, Agenda, Kalender, Formular); Actions in `actions/plan.ts`, `actions/plan-templates.ts`
+- `src/app/(members)/mitglieder/produktionen/_plan/` – Plan (Gantt `gantt.tsx` mit Berechnungen in `src/lib/planning/gantt.ts`, Agenda, Kalender, Formular); Actions in `actions/plan.ts`, `actions/plan-templates.ts`
 - `src/lib/planning/` – Rechenkern (`schedule.ts`), Laden/Rechte (`plan-service.ts`), Vorlagen (`templates.ts`); Konzept in `docs/Plan/projektplanung-plan.md`
 - `src/app/(members)/mitglieder/produktionen/stueck/` – Stück (Ablauf, Rollen, Auftrittsplan, Panels)
 
