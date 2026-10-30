@@ -161,10 +161,10 @@ export function PlanGantt({
     Math.max(today + 30, ...spanDays, ...[premiere, finalEnd].filter((day) => day !== null)) + 10;
   const px =
     zoom === "fit"
-      ? Math.max(0.5, (viewport - 24) / (rangeEnd - rangeStart + 1))
+      ? Math.max(0.5, (viewport - 190) / (rangeEnd - rangeStart + 1))
       : GANTT_PX_PER_DAY[zoom];
   // Rechts Platz für die Beschriftung neben dem letzten Balken.
-  const end = zoom === "fit" ? rangeEnd : rangeEnd + Math.ceil(180 / px);
+  const end = rangeEnd + Math.ceil(180 / px);
   const start = rangeStart;
   const width = Math.max(viewport, (end - start + 1) * px);
   const x = (day: number) => (day - start) * px;
