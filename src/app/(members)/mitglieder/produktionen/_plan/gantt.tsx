@@ -88,7 +88,7 @@ export function PlanGantt({
   onCreate?: (create: GanttCreate) => void;
   onLink?: (fromId: string, toId: string) => void;
 }) {
-  const [zoom, setZoom] = React.useState<Zoom>("month");
+  const [zoom, setZoom] = React.useState<Zoom>("fit");
   const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
   const [onlyOpen, setOnlyOpen] = React.useState(false);
@@ -811,7 +811,7 @@ export function PlanGantt({
             />
             <text
               x={x(today) + px / 2 + 4}
-              y={HEADER_HEIGHT + 14}
+              y={height - 6}
               className="fill-primary text-[10px] font-semibold"
             >
               heute
@@ -828,7 +828,7 @@ export function PlanGantt({
                 />
                 <text
                   x={x(premiere) + px / 2 - 4}
-                  y={HEADER_HEIGHT + 14}
+                  y={height - 6}
                   textAnchor="end"
                   className="fill-foreground text-[10px] font-semibold"
                 >

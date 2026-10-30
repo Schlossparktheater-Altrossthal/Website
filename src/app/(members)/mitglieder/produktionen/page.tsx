@@ -73,11 +73,14 @@ export default async function ProduktionenPage({
       }),
   ]);
   const dayOf = (iso: string) => toDay(new Date(`${iso}T00:00:00.000Z`));
-  const holidays = holidayRanges.map((range) => ({
-    start: dayOf(range.startDate),
-    end: dayOf(range.endDate),
-    title: range.title,
-  }));
+  // Nur Schulferien als Fläche; einzelne Feiertage machen die Zeitleiste unruhig.
+  const holidays = holidayRanges
+    .filter((range) => range.category === "schoolHoliday")
+    .map((range) => ({
+      start: dayOf(range.startDate),
+      end: dayOf(range.endDate),
+      title: range.title,
+    }));
   const templates: PlanTemplateSummary[] = [
     ...storedTemplates.map((template) => ({
       id: template.id,
