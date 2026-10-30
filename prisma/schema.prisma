@@ -1094,6 +1094,8 @@ model ServerSettings {
   parentalConsentUploadedAt   DateTime?
   parentalConsentUploadedById String?
   parentalConsentUploadedBy   User?     @relation("ServerSettingsParentalConsentUploader", fields: [parentalConsentUploadedById], references: [id], onDelete: SetNull)
+  /// Letzter regelmäßiger Abgleich der Authentik-Dienst-Gruppen (Sperre über alle Pods).
+  serviceGroupSyncAt          DateTime?
 }
 
 model SeasonResetSettings {

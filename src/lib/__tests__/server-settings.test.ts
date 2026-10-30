@@ -47,6 +47,7 @@ function createRecord(overrides: Partial<ServerSettings> = {}): ServerSettings {
     parentalConsentSize: null,
     parentalConsentUploadedAt: null,
     parentalConsentUploadedById: null,
+    serviceGroupSyncAt: null,
     ...overrides,
   };
 }
@@ -81,6 +82,7 @@ describe("resolveServerSettings", () => {
       parentalConsentSize: null,
       parentalConsentUploadedAt: null,
       parentalConsentUploadedById: null,
+      serviceGroupSyncAt: null,
     });
 
     expect(resolved.mailFromAddress).toBeNull();

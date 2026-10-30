@@ -28,6 +28,11 @@ const logger = createLogger("authentik-service-groups");
 
 const SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const SYNC_DEBOUNCE_MS = 5 * 1000;
+// Erster regelmäßiger Abgleich erst nach dem Start, damit ein Rollout nicht
+// alle Pods gleichzeitig auf Authentik loslässt.
+const SYNC_STARTUP_DELAY_MS = 2 * 60 * 1000;
+// Etwas kürzer als das Intervall, damit sich Pods nicht gegenseitig aussperren.
+const SYNC_LEASE_SECONDS = Math.floor((SYNC_INTERVAL_MS * 0.9) / 1000);
 
 export type ServiceGroupSyncResult = { added: number; removed: number; failed: number };
 
@@ -107,6 +112,38 @@ const state: SyncState = (globalForSync.__serviceGroupSync ??= {
   interval: null,
 });
 
+/**
+ * Der regelmäßige Abgleich läuft je Intervall nur in einem Pod: Wer den
+ * Zeitstempel in ServerSettings atomar vorrückt, gleicht ab.
+ */
+async function claimScheduledSync(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    INSERT INTO "ServerSettings" ("id", "updatedAt", "serviceGroupSyncAt")
+    VALUES ('default', now(), now())
+    ON CONFLICT ("id") DO UPDATE SET "serviceGroupSyncAt" = now()
+    WHERE "ServerSettings"."serviceGroupSyncAt" IS NULL
+       OR "ServerSettings"."serviceGroupSyncAt" < now() - make_interval(secs => ${SYNC_LEASE_SECONDS})
+    RETURNING "id"`;
+  return rows.length > 0;
+}
+
+function runScheduledSync(): void {
+  claimScheduledSync()
+    .then((claimed) => {
+      if (claimed) runSync();
+    })
+    .catch((error) => {
+      console.error(
+        "[authentik] Sperre für den Gruppen-Abgleich nicht gesetzt:",
+        errorMessage(error),
+      );
+    });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
 function runSync(): void {
   if (state.running) {
     state.rerun = true;
@@ -121,7 +158,7 @@ function runSync(): void {
         });
       }
     } catch (error) {
-      console.error("[authentik] Abgleich der Dienst-Gruppen fehlgeschlagen", error);
+      console.error("[authentik] Abgleich der Dienst-Gruppen fehlgeschlagen:", errorMessage(error));
     } finally {
       state.running = null;
       if (state.rerun) {
@@ -149,7 +186,7 @@ export function requestServiceGroupSync(): void {
 /** Regelmäßiger Komplettabgleich, gestartet in instrumentation.ts. */
 export function startServiceGroupSyncSchedule(): void {
   if (!isAuthentikProvisioningEnabled() || state.interval) return;
-  state.interval = setInterval(runSync, SYNC_INTERVAL_MS);
+  state.interval = setInterval(runScheduledSync, SYNC_INTERVAL_MS);
   state.interval.unref?.();
-  requestServiceGroupSync();
+  setTimeout(runScheduledSync, SYNC_STARTUP_DELAY_MS).unref?.();
 }

@@ -6,7 +6,7 @@ import {
   type AuthentikApiConfig,
 } from "@/lib/authentik/config";
 
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 const authentikUserSchema = z.object({
   pk: z.number(),
