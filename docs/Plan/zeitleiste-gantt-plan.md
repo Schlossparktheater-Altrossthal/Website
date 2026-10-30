@@ -1,6 +1,6 @@
 # Plan: Zeitleiste des Produktionsplans als Gantt-Ansicht
 
-Stand: 2026-10-30. Konzept, Entscheidungen offen (siehe unten). Nachfolger der Zeitleiste aus
+Stand: 2026-10-30. Entscheidungen E1–E4 wie vorgeschlagen getroffen; Phase 1–5 auf main/Staging (da7dcc6f, 28d20e4b, 5e4e4482, 4749e9d6), offen: PDF im Gantt-Layout, E2E Ziehen, Abnahme/Release. Nachfolger der Zeitleiste aus
 `docs/Plan/projektplanung-plan.md`.
 
 ## Ziel
@@ -100,10 +100,10 @@ Dauer, eine Zeile pro Aufgabe, gruppiert nach Gewerk, Bearbeiten direkt im Diagr
 
 ## Checkliste
 
-- [ ] Entscheidungen E1–E4
-- [ ] Phase 1 Layout
-- [ ] Phase 2 Dauer
-- [ ] Phase 3 Abhängigkeiten
-- [ ] Phase 4 Direkt bearbeiten
-- [ ] Phase 5 Filter & Extras
-- [ ] Phase 6 Prüfung/Release
+- [x] Entscheidungen E1–E4
+- [x] Phase 1 Layout
+- [x] Phase 2 Dauer
+- [x] Phase 3 Abhängigkeiten
+- [x] Phase 4 Direkt bearbeiten
+- [x] Phase 5 Filter & Extras (ohne PDF-Export; nur Schulferien, Feiertage bewusst weggelassen)
+- [ ] Phase 6 Prüfung/Release – Vitest `src/lib/planning/__tests__/gantt.test.ts` erledigt, Screenshots Desktop/Tablet hell+dunkel angesehen; offen E2E Ziehen, Gerätetest, Release
