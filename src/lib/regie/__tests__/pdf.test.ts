@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
-import { BINDER_DEFAULT_PARTS, parseBinderParts, sceneRows } from "@/lib/regie/pdf";
+import { sceneRows } from "@/lib/regie/availability";
+import { BINDER_DEFAULT_PARTS, parseBinderParts } from "@/lib/regie/pdf";
 import type { DirectionCastRole, DirectionScene } from "@/lib/regie/data";
 
 const role = (id: string, ...users: string[]): DirectionCastRole => ({

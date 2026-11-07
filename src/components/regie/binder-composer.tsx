@@ -5,6 +5,9 @@ import * as React from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { availabilityQuery } from "@/lib/regie/availability-range";
+
+import { AvailabilityRangeFields, useSavedAvailabilityRange } from "./availability-pdf-picker";
 
 type BinderPart = { kind: string; label: string; available: boolean };
 
@@ -22,6 +25,7 @@ export function BinderComposer({
 }) {
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<string[]>(defaults);
+  const availability = useSavedAvailabilityRange();
 
   const openSheet = () => {
     try {
@@ -30,11 +34,15 @@ export function BinderComposer({
     } catch {
       // ungültig gespeichert: Vorauswahl behalten
     }
+    availability.load();
     setOpen(true);
   };
 
   const chosen = parts.filter((part) => part.available && selected.includes(part.kind));
-  const href = `${pdfHref}?teile=${chosen.map((part) => part.kind).join(",")}`;
+  const withAvailability = chosen.some((part) => part.kind === "verfuegbarkeit");
+  const href = `${pdfHref}?teile=${chosen.map((part) => part.kind).join(",")}${
+    withAvailability ? `&${availabilityQuery(availability.range)}` : ""
+  }`;
 
   const toggle = (kind: string, checked: boolean) =>
     setSelected((list) => {
@@ -94,6 +102,12 @@ export function BinderComposer({
             </li>
           ))}
         </ul>
+        {withAvailability ? (
+          <div className="mt-4 rounded-md border p-3">
+            <p className="mb-3 text-sm font-semibold">Verfügbarkeit</p>
+            <AvailabilityRangeFields range={availability.range} onChange={availability.update} />
+          </div>
+        ) : null}
         <p className="mt-3 text-xs text-muted-foreground">
           Mit Deckblatt (Stand und Inhalt). Die Mappe wird beim Öffnen frisch erstellt.
         </p>

@@ -8,11 +8,13 @@ import { DateBadge } from "@/components/ui/date-badge";
 import { StatTile } from "@/components/ui/stat-tile";
 import { prisma } from "@/lib/prisma";
 import { DIRECTION_HOME_PATH } from "@/lib/regie/access";
+import { AvailabilityPdfButton } from "@/components/regie/availability-pdf-picker";
+import { loadDirectionAvailabilityView } from "@/lib/regie/availability";
+import { describeAvailabilityRange, parseAvailabilityRange } from "@/lib/regie/availability-range";
 import { buildDirectionCountdown } from "@/lib/regie/countdown";
 import {
   dayKeyOf,
   eventTimeLabel,
-  loadDirectionAvailability,
   loadDirectionCasting,
   loadDirectionCountdownData,
   loadDirectionEvents,
@@ -81,7 +83,7 @@ export default async function DirectionDashboardPage({
     loadDirectionEvents(show.id),
     loadDirectionScenes(show.id),
     loadDirectionCasting(show.id),
-    loadDirectionAvailability(show.id, { from: new Date(), days: 14 }),
+    loadDirectionAvailabilityView(show.id, parseAvailabilityRange(null, null)),
     loadDirectionProtocols(show.id, 5),
     loadDirectionProps(show.id),
     loadDirectionScript(show.id),
@@ -110,14 +112,11 @@ export default async function DirectionDashboardPage({
   const nextEvents = events.filter((event) => event.status !== "CANCELLED").slice(0, 3);
   const rehearsals = events.filter((event) => event.rehearsal && event.status !== "CANCELLED");
   const unassigned = roles.filter((role) => !role.castings.length);
-  const absentDays = availability.members.reduce(
-    (sum, member) =>
-      sum + Object.values(member.entries).filter((kind) => kind !== "LIMITED").length,
-    0,
-  );
-  const absentPeople = availability.members.filter((member) =>
-    Object.values(member.entries).some((kind) => kind !== "LIMITED"),
-  ).length;
+  const availabilityLabel = describeAvailabilityRange(parseAvailabilityRange(null, null));
+  const absentPeople = new Set(
+    availability.days.flatMap((day) => day.absent.map((person) => person.id)),
+  ).size;
+  const nextAbsences = availability.days.filter((day) => day.absent.length).slice(0, 3);
   const openTasks = protocols.reduce(
     (sum, protocol) => sum + protocol.notes.filter((n) => n.type === "TASK" && !n.done).length,
     0,
@@ -286,13 +285,37 @@ export default async function DirectionDashboardPage({
         <DirectionCard
           title="Verfügbarkeit"
           summary={
-            absentPeople
-              ? `Nächste 2 Wochen: ${absentPeople} ${absentPeople === 1 ? "Person fehlt" : "Personen fehlen"} an einzelnen Tagen (${absentDays} Abwesenheiten)`
-              : "Nächste 2 Wochen: niemand hat sich abgemeldet."
+            !availability.days.length
+              ? `${availabilityLabel}: keine Tage im Zeitraum.`
+              : absentPeople
+                ? `${availabilityLabel}: ${absentPeople} ${absentPeople === 1 ? "Person fehlt" : "Personen fehlen"} an einzelnen Tagen`
+                : `${availabilityLabel}: alle können.`
           }
           viewHref={href("verfuegbarkeit")}
-          pdfHref={pdf("verfuegbarkeit")}
-        />
+          actions={
+            <AvailabilityPdfButton pdfHref={pdf("verfuegbarkeit")} size="lg" className="flex-1" />
+          }
+        >
+          {nextAbsences.length ? (
+            <ul className="space-y-2">
+              {nextAbsences.map((day) => (
+                <li key={day.key} className="flex gap-3">
+                  <DateBadge date={new Date(`${day.key}T12:00:00Z`)} />
+                  <ul className="min-w-0 space-y-0.5 text-sm">
+                    {day.absent.map((person) => (
+                      <li key={person.id}>
+                        <span className="font-medium">{person.name}</span>
+                        {person.reason ? (
+                          <span className="text-muted-foreground"> – {person.reason}</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </DirectionCard>
 
         <DirectionCard
           title="Besetzung"

@@ -65,11 +65,14 @@ export function DirectionViewHeader({
   description,
   showId,
   pdfKind,
+  pdfAction,
 }: {
   title: string;
   description?: string;
   showId: string;
   pdfKind?: string;
+  /** Eigener PDF-Knopf (z. B. mit Auswahlfenster) statt des direkten Links. */
+  pdfAction?: React.ReactNode;
 }) {
   return (
     <div className="space-y-3">
@@ -80,13 +83,14 @@ export function DirectionViewHeader({
         title={title}
         description={description}
         actions={
-          pdfKind ? (
+          pdfAction ??
+          (pdfKind ? (
             <Button asChild variant="outline">
               <a href={directionPdfHref(pdfKind, showId)} target="_blank" rel="noopener">
                 PDF
               </a>
             </Button>
-          ) : undefined
+          ) : undefined)
         }
       />
     </div>

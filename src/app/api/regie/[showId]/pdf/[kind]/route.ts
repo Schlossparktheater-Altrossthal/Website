@@ -8,13 +8,14 @@ import {
   renderDirectionBinder,
   renderDirectionPdf,
 } from "@/lib/regie/pdf";
+import { parseAvailabilityRange } from "@/lib/regie/availability-range";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
  * PDFs des Regie-Dashboards (docs/Plan/regie-plan.md). Die Daten lädt der Server selbst –
- * ohne Sperrgründe, Maße und Kontakte. Öffnet inline (Handy), `?download=1` speichert.
+ * ohne Maße und Kontakte. Verfügbarkeit: `?ansicht=kerntage|wochen|termine&wochen=2`. Öffnet inline (Handy), `?download=1` speichert.
  * `mappe?teile=termine,szenen` erzeugt die Probenmappe aus den gewählten Teilen.
  */
 export const GET = withRoute<{ showId: string; kind: string }>(
@@ -30,14 +31,17 @@ export const GET = withRoute<{ showId: string; kind: string }>(
       return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
     }
 
+    const query = request.nextUrl.searchParams;
+    const range = parseAvailabilityRange(query.get("ansicht"), query.get("wochen"));
     const result =
       kind === "mappe"
         ? await renderDirectionBinder(
             parseBinderParts(request.nextUrl.searchParams.get("teile")),
             show,
             userId,
+            range,
           )
-        : await renderDirectionPdf(kind, show, userId);
+        : await renderDirectionPdf(kind, show, userId, range);
     if (!result) {
       return NextResponse.json({ error: "Dafür gibt es noch keine Daten." }, { status: 404 });
     }

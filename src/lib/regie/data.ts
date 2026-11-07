@@ -5,33 +5,19 @@ import type {
   ProductionObjectStatus,
 } from "@prisma/client";
 
-import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { currentCastingWhere, currentMembershipWhere } from "@/lib/produktionen/status";
 import { formatSceneLabel } from "@/lib/produktionen/scenes";
+import { dayKeyOf, formatTime } from "@/lib/regie/data-format";
 
 /**
  * Lese-Daten des Regie-Dashboards (docs/Plan/regie-plan.md, Phase 3+4). Bewusst ohne
- * Sperrgründe, Körpermaße und Kontaktdaten – nichts davon verlässt den Server.
+ * Körpermaße und Kontaktdaten. Sperrgründe sieht die Regie seit 2026-11-07 (Wunsch der Regie:
+ * „wer kann“ ist ohne Grund nicht planbar).
  */
 
-const DATE = new Intl.DateTimeFormat("de-DE", {
-  weekday: "short",
-  day: "numeric",
-  month: "numeric",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-const TIME = new Intl.DateTimeFormat("de-DE", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIME_ZONE });
-
-export const dayKeyOf = (date: Date) => DAY_KEY.format(date);
-export const formatDay = (date: Date) => DATE.format(date).replace(/\.,/, ",");
-export const formatTime = (date: Date) => TIME.format(date);
+export { dayKeyOf, formatDay, formatTime } from "@/lib/regie/data-format";
 
 type NameFields = { firstName: string | null; lastName: string | null; name: string | null };
 const nameSelect = { firstName: true, lastName: true, name: true } as const;
@@ -118,7 +104,7 @@ export type DirectionEvent = {
   status: "SCHEDULED" | "TENTATIVE" | "CANCELLED";
   scenes: string[];
   invited: number;
-  /** Abgesagt bzw. laut Sperrliste verhindert – nur Namen, keine Gründe. */
+  /** Abgesagt bzw. laut Sperrliste verhindert – „Name (Grund)“, falls ein Grund angegeben ist. */
   absent: string[];
   updatedAt: Date;
 };
@@ -156,7 +142,12 @@ export async function loadDirectionEvents(
       },
       participants: {
         where: { invited: true, override: { not: "EXCLUDED" } },
-        select: { userId: true, response: true, user: { select: nameSelect } },
+        select: {
+          userId: true,
+          response: true,
+          responseNote: true,
+          user: { select: nameSelect },
+        },
       },
     },
   });
@@ -171,11 +162,14 @@ export async function loadDirectionEvents(
           kind: { in: ["BLOCKED", "EMERGENCY"] },
           date: { in: days.map((key) => new Date(`${key}T00:00:00.000Z`)) },
         },
-        select: { userId: true, date: true },
+        select: { userId: true, date: true, reason: true },
       })
     : [];
-  const blockedKeys = new Set(
-    blocked.map((entry) => `${entry.userId}:${entry.date.toISOString().slice(0, 10)}`),
+  const blockedKeys = new Map(
+    blocked.map((entry) => [
+      `${entry.userId}:${entry.date.toISOString().slice(0, 10)}`,
+      entry.reason?.trim() || null,
+    ]),
   );
 
   return events.map((event) => {
@@ -201,12 +195,18 @@ export async function loadDirectionEvents(
             p.response === "emergency" ||
             blockedKeys.has(`${p.userId}:${day}`),
         )
-        .map((p) => displayName(p.user))
+        .map((p) => {
+          const reason = p.responseNote?.trim() || blockedKeys.get(`${p.userId}:${day}`) || null;
+          return withReason(displayName(p.user), reason);
+        })
         .sort((a, b) => a.localeCompare(b, "de")),
       updatedAt: event.updatedAt,
     };
   });
 }
+
+export const withReason = (name: string, reason: string | null | undefined) =>
+  reason ? `${name} (${reason})` : name;
 
 export function eventTimeLabel(event: Pick<DirectionEvent, "start" | "end" | "allDay">) {
   if (event.allDay) return "ganztägig";
@@ -216,24 +216,20 @@ export function eventTimeLabel(event: Pick<DirectionEvent, "start" | "end" | "al
 }
 
 // ---------------------------------------------------------------------------
-// Verfügbarkeit (ohne Gründe)
+// Verfügbarkeit (mit Gründen)
+
+export type DirectionAvailabilityEntry = { kind: BlockedDayKind; reason: string | null };
 
 export type DirectionAvailabilityMember = {
   id: string;
   name: string;
   roles: string[];
-  entries: Record<string, BlockedDayKind>;
+  entries: Record<string, DirectionAvailabilityEntry>;
 };
 
-export async function loadDirectionAvailability(
-  showId: string,
-  { from, days }: { from: Date; days: number },
-) {
-  const keys = Array.from({ length: days }, (_, index) => {
-    const date = new Date(from);
-    date.setUTCDate(date.getUTCDate() + index);
-    return dayKeyOf(date);
-  });
+/** Sperrlisten-Einträge für die angegebenen Tage (yyyy-MM-dd, aufsteigend). */
+export async function loadDirectionAvailability(showId: string, keys: string[]) {
+  if (!keys.length) keys = [dayKeyOf(new Date())];
   const [members, castRoles] = await Promise.all([
     prisma.productionMembership.findMany({
       where: { showId, ...currentMembershipWhere(), user: { deactivatedAt: null } },
@@ -250,7 +246,7 @@ export async function loadDirectionAvailability(
                   lte: new Date(`${keys.at(-1)}T00:00:00.000Z`),
                 },
               },
-              select: { date: true, kind: true },
+              select: { date: true, kind: true, reason: true },
             },
           },
         },
@@ -272,7 +268,10 @@ export async function loadDirectionAvailability(
       name: displayName(user),
       roles: rolesByUser.get(user.id) ?? [],
       entries: Object.fromEntries(
-        user.blockedDays.map((day) => [day.date.toISOString().slice(0, 10), day.kind]),
+        user.blockedDays.map((day) => [
+          day.date.toISOString().slice(0, 10),
+          { kind: day.kind, reason: day.reason?.trim() || null },
+        ]),
       ),
     }))
     // Ensemble zuerst, dann nach Name.
