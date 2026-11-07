@@ -49,7 +49,12 @@ export default async function ProductDetailPage({
   const bulk = product.kind === "bulk";
   const isSet = product.kind === "set";
   const unit = product.unit ?? "Stk.";
-  const details: { label: string; value: string; type?: FieldType }[] = [
+  const details: {
+    label: string;
+    value: string;
+    type?: FieldType;
+    file?: { id: string } | null;
+  }[] = [
     { label: "Art", value: ASSET_KIND_LABELS[product.kind] },
     ...(product.manufacturer ? [{ label: "Hersteller", value: product.manufacturer }] : []),
     ...(product.model ? [{ label: "Modell", value: product.model }] : []),
@@ -266,7 +271,11 @@ export default async function ProductDetailPage({
                 <div key={entry.label} className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{entry.label}</dt>
                   <dd className="break-words text-foreground">
-                    <SpecValueDisplay type={entry.type} value={entry.value} />
+                    <SpecValueDisplay
+                      type={entry.type}
+                      value={entry.value}
+                      fileId={entry.file?.id}
+                    />
                   </dd>
                 </div>
               ))}

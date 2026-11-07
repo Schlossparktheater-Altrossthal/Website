@@ -203,6 +203,7 @@ function attributeColumns(ctx: BulkContext): FieldDef[] {
   const seen = new Map<string, FieldDef>();
   for (const area of areas) {
     for (const field of [...area.fields, ...area.categories.flatMap((entry) => entry.fields)]) {
+      if (field.type === "file") continue;
       if (!seen.has(field.key)) seen.set(field.key, field);
     }
   }

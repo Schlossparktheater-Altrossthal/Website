@@ -90,7 +90,7 @@ describe("Merkmale", () => {
 
   it("beschreibt Werte mit Einheit", () => {
     expect(describeSpecs(area.fields, { power: 750 })).toEqual([
-      { key: "power", label: "power", value: "750 W", type: "number" },
+      { key: "power", label: "power", value: "750 W", type: "number", file: null },
     ]);
   });
 });
@@ -250,5 +250,26 @@ describe("Bereich, Bewertung, Farbe, Link, Text und Zeitraum", () => {
     expect(specToInput(fields[1]!, { from: "2026-01-01", to: "2026-03-31" })).toBe(
       "2026-01-01~2026-03-31",
     );
+  });
+});
+
+describe("Datei-Anhang", () => {
+  const fields = [field("blatt", { type: "file" })];
+
+  it("prüft nur vollständige Datei-Verweise", () => {
+    const file = { id: "abc", name: "datenblatt.pdf", mime: "application/pdf", size: 2048 };
+    expect(parseSpecs(fields, { blatt: file })).toEqual({ blatt: file });
+    expect(() => parseSpecs(fields, { blatt: "datenblatt.pdf" })).toThrow(/Datei/);
+    expect(() => parseSpecs([field("blatt", { type: "file", required: true })], {})).toThrow(
+      /blatt/,
+    );
+  });
+
+  it("zeigt den Dateinamen und reicht ihn zur Anzeige durch", () => {
+    const file = { id: "abc", name: "datenblatt.pdf", mime: "application/pdf", size: 2048 };
+    const rows = describeSpecs(fields, readSpecs({ blatt: file }));
+    expect(rows[0]!.value).toBe("datenblatt.pdf");
+    expect(rows[0]!.file).toEqual(file);
+    expect(specToInput(fields[0]!, file)).toEqual(file);
   });
 });

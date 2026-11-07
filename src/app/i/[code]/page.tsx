@@ -148,7 +148,7 @@ export default async function PublicInventoryPage({
             <div key={entry.label}>
               <dt className="text-muted-foreground">{entry.label}</dt>
               <dd className="text-foreground">
-                <SpecValueDisplay type={entry.type} value={entry.value} />
+                <SpecValueDisplay type={entry.type} value={entry.value} fileId={entry.file?.id} />
               </dd>
             </div>
           ))}

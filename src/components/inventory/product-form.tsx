@@ -66,6 +66,7 @@ export function ProductForm({
           onChange={setValues}
           areas={areas}
           mode="edit"
+          productId={productId}
           canCreateCategory={canCatalog}
         />
       </section>

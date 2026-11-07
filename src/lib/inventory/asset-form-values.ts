@@ -9,6 +9,7 @@ import {
   type CategoryNode,
   type FieldDef,
   type FieldLevel,
+  type FileValue,
   type Specs,
 } from "@/lib/inventory/specs";
 
@@ -26,7 +27,7 @@ export type AssetFormArea = {
   categories: (CategoryNode & FieldLevel)[];
 };
 
-export type SpecFormValues = Record<string, string | boolean>;
+export type SpecFormValues = Record<string, string | boolean | FileValue>;
 
 export type ProductFormValues = {
   areaId: string;

@@ -2010,6 +2010,8 @@ enum InventoryFieldType {
   combo
   /// Datumsbereich von–bis, gespeichert als `{ from, to }` (ISO, eine Seite darf null sein).
   daterange
+  /// Datei-Anhang; Metadaten `{ id, name, mime, size }` in `specs`, Bytes in `InventoryProductFile`.
+  file
 }
 
 /// Abweichung eines geerbten Merkmals ab einer Kategorie (gilt auch für Unterkategorien):
@@ -2094,6 +2096,7 @@ model InventoryProduct {
   usedInSets               InventoryProductComponent[] @relation("InventorySetUsage")
   tags                     InventoryTag[]
   productionObjects        ProductionObject[]
+  files                    InventoryProductFile[]
 
   @@unique([areaId, number])
   @@index([areaId])
@@ -2284,6 +2287,24 @@ model InventoryProductComponent {
 
   @@unique([setId, componentId])
   @@index([componentId])
+}
+
+/// Datei-Anhang zu einem Merkmal vom Typ `file` eines Artikeltyps. Die Metadaten stehen als
+/// `{ id, name, mime, size }` in `InventoryProduct.specs`, die Bytes liegen hier.
+model InventoryProductFile {
+  id        String           @id @default(cuid())
+  productId String
+  /// Merkmalschlüssel (`InventoryFieldDef.key`), je Typ höchstens eine Datei.
+  fieldKey  String
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime         @default(now())
+  product   InventoryProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, fieldKey])
+  @@index([productId])
 }
 
 enum InventoryProjectStatus {

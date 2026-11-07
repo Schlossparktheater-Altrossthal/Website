@@ -20,6 +20,7 @@ export const FIELD_TYPES = [
   "daterange",
   "color",
   "url",
+  "file",
 ] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
 
@@ -39,6 +40,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   daterange: "Zeitraum (von–bis)",
   color: "Farbe",
   url: "Link",
+  file: "Datei",
 };
 
 /** Kategorien dürfen höchstens so viele Ebenen tief sein. */
@@ -118,8 +120,11 @@ export type RangeValue = { from: number | null; to: number | null };
 /** Datumsbereich (von–bis), ISO `YYYY-MM-DD`; eine Seite darf `null` sein. */
 export type DateRangeValue = { from: string | null; to: string | null };
 
+/** Datei-Anhang: Metadaten im Merkmal, die Bytes liegen in `InventoryProductFile`. */
+export type FileValue = { id: string; name: string; mime: string; size: number };
+
 export type SpecValue =
-  string | number | boolean | string[] | DimensionsValue | RangeValue | DateRangeValue;
+  string | number | boolean | string[] | DimensionsValue | RangeValue | DateRangeValue | FileValue;
 export type Specs = Record<string, SpecValue>;
 
 export type CategoryNode = { id: string; parentId: string | null; name: string };
@@ -396,6 +401,17 @@ function isDateRange(value: unknown): value is DateRangeValue {
   return ("from" in entry || "to" in entry) && bound(entry.from) && bound(entry.to);
 }
 
+function isFileValue(value: unknown): value is FileValue {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.id === "string" &&
+    typeof entry.name === "string" &&
+    typeof entry.mime === "string" &&
+    typeof entry.size === "number"
+  );
+}
+
 /** Ein Wert ist leer, wenn er nicht gesetzt oder ein beidseitig leerer Bereich ist. */
 function isEmptyValue(value: unknown): boolean {
   if (value === undefined || value === null || value === "") return true;
@@ -631,6 +647,13 @@ export function parseSpecs(fields: readonly FieldDef[], raw: unknown): Specs {
         result[field.key] = range;
         break;
       }
+      case "file": {
+        if (!isFileValue(text)) {
+          throw new Error(`„${field.label}“ fehlt die hochgeladene Datei.`);
+        }
+        result[field.key] = text;
+        break;
+      }
       default: {
         const string = String(text).slice(0, 200);
         result[field.key] = string;
@@ -655,6 +678,8 @@ export function readSpecs(value: unknown): Specs {
       if (entry.from !== null || entry.to !== null) result[key] = entry;
     } else if (isDateRange(entry)) {
       if (entry.from !== null || entry.to !== null) result[key] = entry;
+    } else if (isFileValue(entry)) {
+      result[key] = entry;
     }
   }
   return result;
@@ -664,6 +689,7 @@ export function formatSpecValue(field: Pick<FieldDef, "type" | "unit">, value: S
   if (field.type === "boolean") return value ? "Ja" : "Nein";
   if (field.type === "range" && isRange(value)) return formatRange(value, field.unit);
   if (field.type === "daterange" && isDateRange(value)) return formatDateRange(value);
+  if (field.type === "file" && isFileValue(value)) return value.name;
   if (isDimensions(value)) return formatDimensions(value, field.unit);
   if (Array.isArray(value)) return value.join(", ");
   if (field.type === "measure" && typeof value === "number")
@@ -678,12 +704,13 @@ export function formatSpecValue(field: Pick<FieldDef, "type" | "unit">, value: S
   return field.unit ? `${text} ${field.unit}` : text;
 }
 
-/** Gespeicherter Wert als Formulareingabe (Text bzw. Schalter). */
+/** Gespeicherter Wert als Formulareingabe (Text, Schalter oder Datei-Verweis). */
 export function specToInput(
   field: Pick<FieldDef, "type" | "unit">,
   value: SpecValue,
-): string | boolean {
+): string | boolean | FileValue {
   if (typeof value === "boolean") return value;
+  if (field.type === "file") return isFileValue(value) ? value : "";
   if (isRange(value)) return `${value.from ?? ""}~${value.to ?? ""}`;
   if (isDateRange(value)) return `${value.from ?? ""}~${value.to ?? ""}`;
   if (isDimensions(value)) return formatDimensions(value, field.unit);
@@ -701,13 +728,17 @@ export function specToInput(
 export function describeSpecs(
   fields: readonly FieldDef[],
   specs: Specs,
-): { key: string; label: string; value: string; type: FieldType }[] {
+): { key: string; label: string; value: string; type: FieldType; file: FileValue | null }[] {
   return fields
     .filter((field) => specs[field.key] !== undefined)
-    .map((field) => ({
-      key: field.key,
-      label: field.label,
-      value: formatSpecValue(field, specs[field.key]!),
-      type: field.type,
-    }));
+    .map((field) => {
+      const value = specs[field.key]!;
+      return {
+        key: field.key,
+        label: field.label,
+        value: formatSpecValue(field, value),
+        type: field.type,
+        file: field.type === "file" && isFileValue(value) ? value : null,
+      };
+    });
 }

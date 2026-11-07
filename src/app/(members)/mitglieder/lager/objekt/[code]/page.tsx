@@ -68,7 +68,12 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
       ? { type: "location", id: asset.locationId }
       : { type: "none" };
   const locked = asset.status === "locked";
-  const details: { label: string; value: string; type?: FieldType }[] = [
+  const details: {
+    label: string;
+    value: string;
+    type?: FieldType;
+    file?: { id: string } | null;
+  }[] = [
     { label: "Art", value: ASSET_KIND_LABELS[asset.kind] },
     { label: "Zustand", value: CONDITION_LABELS[asset.condition] },
     ...(asset.product.manufacturer
@@ -413,7 +418,11 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                 <div key={entry.label} className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{entry.label}</dt>
                   <dd className="break-words text-foreground">
-                    <SpecValueDisplay type={entry.type} value={entry.value} />
+                    <SpecValueDisplay
+                      type={entry.type}
+                      value={entry.value}
+                      fileId={entry.file?.id}
+                    />
                   </dd>
                 </div>
               ))}

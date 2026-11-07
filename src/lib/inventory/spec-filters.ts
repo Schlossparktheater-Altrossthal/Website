@@ -33,10 +33,14 @@ export type SpecCondition =
 /** Größte zulässige Maße (mm, aufsteigend) für „passt in“. */
 export type FitsFilter = { min: number; mid: number; max: number };
 
-/** Merkmale, nach denen sich filtern lässt (Maße laufen über „passt in“, Zeiträume nicht). */
+/** Merkmale, nach denen sich filtern lässt (Maße laufen über „passt in“, Zeiträume und Dateien nicht). */
 export function filterableFields(fields: readonly FieldDef[]): FieldDef[] {
   return fields.filter(
-    (field) => field.type !== "dimensions" && field.type !== "date" && field.type !== "daterange",
+    (field) =>
+      field.type !== "dimensions" &&
+      field.type !== "date" &&
+      field.type !== "daterange" &&
+      field.type !== "file",
   );
 }
 

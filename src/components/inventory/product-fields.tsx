@@ -7,6 +7,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -35,6 +37,7 @@ import {
   formatMeasure,
   SCALE_MAX,
   type FieldDef,
+  type FileValue,
 } from "@/lib/inventory/specs";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +61,7 @@ export function ProductFields({
   areas,
   mode,
   nameRef,
+  productId,
   canCreateCategory = false,
 }: {
   values: ProductFormValues;
@@ -65,6 +69,8 @@ export function ProductFields({
   areas: AssetFormArea[];
   mode: "create" | "edit";
   nameRef?: React.Ref<HTMLInputElement>;
+  /** Artikeltyp – nötig, um Datei-Merkmale hochzuladen (nur im Bearbeiten-Modus). */
+  productId?: string;
   /** Darf neue Kategorien direkt aus der Auswahl anlegen (Katalog-Recht). */
   canCreateCategory?: boolean;
 }) {
@@ -215,6 +221,8 @@ export function ProductFields({
                 key={field.key}
                 field={field}
                 value={values.specs[field.key]}
+                productId={productId}
+                fileDisabled={mode === "create"}
                 onChange={(value) => set("specs", { ...values.specs, [field.key]: value })}
               />
             ))}
@@ -300,10 +308,16 @@ export function SpecField({
   field,
   value,
   onChange,
+  productId,
+  fileDisabled = false,
 }: {
   field: FieldDef;
-  value: string | boolean | undefined;
-  onChange: (value: string | boolean) => void;
+  value: string | boolean | FileValue | undefined;
+  onChange: (value: string | boolean | FileValue) => void;
+  /** Artikeltyp für Datei-Uploads (nur im Bearbeiten-Modus gesetzt). */
+  productId?: string;
+  /** Datei-Upload erst nach dem Anlegen möglich (Erfassen-Modus). */
+  fileDisabled?: boolean;
 }) {
   const id = `spec-${field.key}`;
   const label = `${field.label}${field.unit ? ` (${field.unit})` : ""}${field.required ? " *" : ""}`;
@@ -523,6 +537,17 @@ export function SpecField({
       </div>
     );
   }
+  if (field.type === "file") {
+    return (
+      <SpecFileField
+        field={field}
+        value={value}
+        productId={productId}
+        fileDisabled={fileDisabled}
+        onChange={onChange}
+      />
+    );
+  }
   if (field.type === "dimensions" || field.type === "measure") {
     const text = typeof value === "string" ? value : "";
     let hint: string | null = null;
@@ -611,6 +636,112 @@ export function SpecField({
         inputMode={field.type === "number" ? "decimal" : undefined}
         onChange={(event) => onChange(event.target.value)}
       />
+    </div>
+  );
+}
+
+/** Datei-Merkmal: hochladen, öffnen und entfernen – eigene Komponente wegen der Hooks. */
+function SpecFileField({
+  field,
+  value,
+  productId,
+  fileDisabled,
+  onChange,
+}: {
+  field: FieldDef;
+  value: string | boolean | FileValue | undefined;
+  productId?: string;
+  fileDisabled?: boolean;
+  onChange: (value: string | boolean | FileValue) => void;
+}) {
+  const id = `spec-${field.key}`;
+  const label = `${field.label}${field.required ? " *" : ""}`;
+  const file = value && typeof value === "object" && "id" in value ? (value as FileValue) : null;
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0];
+    event.target.value = "";
+    if (!selected || !productId) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.set("file", selected);
+      const response = await fetch(
+        `/api/lager/products/${productId}/spec-files/${encodeURIComponent(field.key)}`,
+        { method: "POST", body: form },
+      );
+      const result = (await response.json()) as { ok?: boolean; error?: string; file?: FileValue };
+      if (!response.ok || !result.ok || !result.file) {
+        toast.error(result.error ?? "Datei konnte nicht gespeichert werden.");
+        return;
+      }
+      onChange(result.file);
+      toast.success("Datei gespeichert.");
+    } catch {
+      toast.error("Datei konnte nicht gespeichert werden.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!file) return;
+    try {
+      const response = await fetch(`/api/lager/spec-files/${file.id}`, { method: "DELETE" });
+      const result = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !result.ok) {
+        toast.error(result.error ?? "Datei konnte nicht entfernt werden.");
+        return;
+      }
+      onChange("");
+      toast.success("Datei entfernt.");
+    } catch {
+      toast.error("Datei konnte nicht entfernt werden.");
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-sm leading-none font-medium">{label}</span>
+      {file ? (
+        <div className="flex min-h-10 items-center gap-2 rounded-md border border-border px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{file.name}</span>
+          <a
+            href={`/api/lager/spec-files/${file.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary underline underline-offset-2"
+          >
+            Öffnen
+          </a>
+          <Button type="button" size="sm" variant="ghost" onClick={remove} disabled={uploading}>
+            Entfernen
+          </Button>
+        </div>
+      ) : fileDisabled ? (
+        <p className="text-xs text-muted-foreground">Datei nach dem Anlegen des Typs hochladen.</p>
+      ) : (
+        <div>
+          <input
+            ref={fileInputRef}
+            id={`${id}-file`}
+            type="file"
+            className="hidden"
+            onChange={upload}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? "Lädt …" : "Datei wählen"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

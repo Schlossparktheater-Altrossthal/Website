@@ -1,7 +1,7 @@
 # Plan: Lager – Merkmalstyp „Bereich“ (von–bis) und weitere Typen
 
-Stand: 2026-10-07. Umgesetzt (Phase 1, Phase 2 außer „Anhang/Datei“, Doku und Tests). Auf Staging
-noch nicht geprüft; Release offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-07. Umgesetzt (Phase 1, Phase 2 inklusive „Anhang/Datei“, Doku und Tests). Auf
+Staging noch nicht geprüft; Release offen. Checkliste am Ende wird gepflegt.
 Baut auf `docs/Plan/lager-kategorien-plan.md` auf – dort sind in Phase 5 „Feste Datentypen“
 `measure`, `dimensions`, `multiselect` und `date` bereits umgesetzt.
 
@@ -97,6 +97,12 @@ Nach Nutzen fürs Lager sortiert; jeder Typ läuft durch dieselben Stellen wie P
   den Text `4~16` (Formular, Filter, Sammelerfassung).
 - **Zusätzliche Typen** umgesetzt: `scale` (1–5), `color`, `url`, `note`, `combo`, `daterange`.
   `measure`, `dimensions`, `multiselect` und `date` gab es bereits (Lager 3).
+- **`file` (Anhang/Datei):** Metadaten `{ id, name, mime, size }` stehen im Merkmal, die Bytes in
+  der neuen Tabelle `InventoryProductFile` (Migration
+  `20261007180000_inventory_spec_file`). Upload je Typ und Merkmal über
+  `POST /api/lager/products/[publicId]/spec-files/[schlüssel]`, Download und Entfernen über
+  `/api/lager/spec-files/[id]`. Beim Erfassen eines neuen Typs noch nicht möglich (Typ muss erst
+  existieren) – Hinweis im Formular; danach über „Typ bearbeiten“ hochladen.
 - **Migration** `prisma/migrations/20261007120000_inventory_spec_types/migration.sql` hängt die
   neuen Enum-Werte per `ALTER TYPE … ADD VALUE` an – als eigene Migration, weil neue Enum-Werte
   erst nach dem Commit nutzbar sind.
@@ -108,7 +114,7 @@ Nach Nutzen fürs Lager sortiert; jeder Typ läuft durch dieselben Stellen wie P
   `describeSpecs` jetzt auch den `type`. Eingebunden in Typ-, Objekt- und öffentlicher Scan-Seite.
 - **Katalog-Editor:** „Auswahlwerte“ auch bei `combo` (als Vorschläge), Einheit auch bei `range`;
   Beispiel-Platzhalter über `hasPlaceholder` gesteuert.
-- **Nicht umgesetzt** (bewusste Abgrenzung auf Wunsch): Typ „Anhang/Datei“.
+- **Nicht umgesetzt:** nichts mehr offen – „Anhang/Datei“ ist in dieser Runde nachgezogen.
 - **Prüfstufen:** `lint` (nur die vorbestehende `treeitem`-Warnung), `typecheck`, `test` – die 6
   Fehler in `nutrition-section.test.tsx` sind vorbestehend und ohne Bezug zum Lager. `build` lief
   (siehe Commit).
@@ -117,6 +123,6 @@ Nach Nutzen fürs Lager sortiert; jeder Typ läuft durch dieselben Stellen wie P
 
 - [x] Phase 1 Typ „Bereich“ (von–bis)
 - [x] Phase 2 weitere Typen – Link, Bewertung, mehrzeiliger Text, Farbe, Auswahl mit Freitext,
-      Datums-Zeitraum (Anhang/Datei bewusst offen)
+      Datums-Zeitraum, Anhang/Datei
 - [x] Phase 3 Doku (`docs/seiten/lager.md`) und Unit-Tests
 - [ ] Screenshots mobil/Desktop, Staging-Abnahme und Release zusammen mit Lager 2 und 3
