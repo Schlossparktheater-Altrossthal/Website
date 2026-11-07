@@ -42,9 +42,9 @@ test.describe("als member", () => {
       .poll(async () => {
         const response = await page.request.get("/api/notifications/preferences");
         const body = (await response.json()) as {
-          categories: { category: string; emailMode: string }[];
+          categories: { key: string; emailMode: string }[];
         };
-        return body.categories.find((entry) => entry.category === "proben")?.emailMode;
+        return body.categories.find((entry) => entry.key === "proben")?.emailMode;
       })
       .toBe("instant");
 
