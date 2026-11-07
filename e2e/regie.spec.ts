@@ -26,7 +26,7 @@ test.describe("als admin", () => {
       "Wünsche",
       "Nächste Proben",
       "Probenmappe",
-      "Szenen × Personen",
+      "Szenen",
       "Verfügbarkeit",
       "Besetzung",
     ]) {
