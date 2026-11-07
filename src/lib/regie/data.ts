@@ -106,13 +106,24 @@ export type DirectionEvent = {
   invited: number;
   /** Abgesagt bzw. laut Sperrliste verhindert – „Name (Grund)“, falls ein Grund angegeben ist. */
   absent: string[];
+  /** Zugesagt (ausdrücklich „kommt“). */
+  confirmed: number;
+  description: string | null;
+  cancelReason: string | null;
+  /** Ablauf: Punkte mit Uhrzeit (falls geplant) und Szene bzw. Titel. */
+  agenda: { id: string; time: string | null; label: string; note: string | null }[];
   updatedAt: Date;
 };
 
 /** Termine der Produktion ab `from` (ohne Entwürfe), aufsteigend. */
 export async function loadDirectionEvents(
   showId: string,
-  { from = new Date(), take }: { from?: Date; take?: number } = {},
+  {
+    from = new Date(),
+    to,
+    take,
+    order = "asc",
+  }: { from?: Date; to?: Date; take?: number; order?: "asc" | "desc" } = {},
 ): Promise<DirectionEvent[]> {
   const events = await prisma.calendarEvent.findMany({
     where: {
@@ -120,8 +131,9 @@ export async function loadDirectionEvents(
       departmentId: null,
       status: { not: "DRAFT" },
       OR: [{ start: { gte: from } }, { end: { gte: from } }],
+      ...(to ? { start: { lt: to } } : {}),
     },
-    orderBy: { start: "asc" },
+    orderBy: { start: order },
     take,
     select: {
       id: true,
@@ -132,10 +144,19 @@ export async function loadDirectionEvents(
       end: true,
       allDay: true,
       location: true,
+      description: true,
+      cancelReason: true,
       updatedAt: true,
       blocks: {
-        orderBy: { order: "asc" },
+        orderBy: [{ order: "asc" }],
         select: {
+          id: true,
+          type: true,
+          title: true,
+          note: true,
+          startsAt: true,
+          endsAt: true,
+          track: true,
           scene: { select: { identifier: true, title: true } },
           runScenes: { select: { scene: { select: { identifier: true, title: true } } } },
         },
@@ -188,6 +209,35 @@ export async function loadDirectionEvents(
       status: event.status === "DRAFT" ? "SCHEDULED" : event.status,
       scenes: [...new Set(scenes.map((scene) => scene.identifier ?? scene.title ?? "?"))],
       invited: event.participants.length,
+      confirmed: event.participants.filter((p) => p.response === "yes").length,
+      description: event.description?.trim() || null,
+      cancelReason: event.cancelReason?.trim() || null,
+      agenda: event.blocks.map((block) => {
+        const runLabel = block.runScenes
+          .map((entry) => entry.scene.identifier ?? entry.scene.title)
+          .filter(Boolean)
+          .join(", ");
+        const label =
+          block.title?.trim() ||
+          (block.scene
+            ? formatSceneLabel(block.scene)
+            : runLabel
+              ? `Durchlauf ${runLabel}`
+              : "Programmpunkt");
+        return {
+          id: block.id,
+          time: block.startsAt
+            ? block.endsAt
+              ? `${formatTime(block.startsAt)}–${formatTime(block.endsAt)}`
+              : formatTime(block.startsAt)
+            : null,
+          label:
+            block.scene && block.title?.trim()
+              ? `${formatSceneLabel(block.scene)} · ${block.title.trim()}`
+              : label,
+          note: block.note?.trim() || null,
+        };
+      }),
       absent: event.participants
         .filter(
           (p) =>
@@ -500,4 +550,49 @@ export async function loadWishRecipientOptions(showId: string): Promise<WishReci
     characters: characters.map((character) => ({ id: character.id, label: character.name })),
     people,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Probenstand je Szene
+
+export type DirectionSceneStat = {
+  /** Vergangene Proben (inkl. Durchläufe), nicht abgesagt. */
+  rehearsed: number;
+  last: Date | null;
+  next: Date | null;
+};
+
+/** Wie oft jede Szene geprobt wurde und wann sie wieder dran ist. */
+export async function loadDirectionSceneStats(showId: string) {
+  const now = new Date();
+  const blocks = await prisma.eventBlock.findMany({
+    where: {
+      event: { showId, kind: "REHEARSAL", status: { notIn: ["DRAFT", "CANCELLED"] } },
+    },
+    select: {
+      sceneId: true,
+      runScenes: { select: { sceneId: true } },
+      event: { select: { id: true, start: true } },
+    },
+  });
+  const stats = new Map<string, DirectionSceneStat & { events: Set<string> }>();
+  for (const block of blocks) {
+    const ids = block.sceneId ? [block.sceneId] : block.runScenes.map((entry) => entry.sceneId);
+    for (const id of ids) {
+      const stat = stats.get(id) ?? { rehearsed: 0, last: null, next: null, events: new Set() };
+      if (stat.events.has(block.event.id)) continue;
+      stat.events.add(block.event.id);
+      const start = block.event.start;
+      if (start < now) {
+        stat.rehearsed += 1;
+        if (!stat.last || start > stat.last) stat.last = start;
+      } else if (!stat.next || start < stat.next) {
+        stat.next = start;
+      }
+      stats.set(id, stat);
+    }
+  }
+  return new Map(
+    [...stats].map(([id, { rehearsed, last, next }]) => [id, { rehearsed, last, next }]),
+  );
 }

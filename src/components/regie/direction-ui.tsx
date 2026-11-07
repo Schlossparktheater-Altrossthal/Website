@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type * as React from "react";
 
-import { PageHeader } from "@/components/members/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { directionHref, directionPdfHref } from "@/lib/regie/page";
+import { cn } from "@/lib/utils";
 
 /** Karte im Regie-Dashboard: Zusammenfassung + „Ansehen“ und „PDF“. */
 export function DirectionCard({
@@ -74,26 +74,75 @@ export function DirectionViewHeader({
   /** Eigener PDF-Knopf (z. B. mit Auswahlfenster) statt des direkten Links. */
   pdfAction?: React.ReactNode;
 }) {
-  return (
-    <div className="space-y-3">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link href={directionHref(null, showId)}>← Regie-Übersicht</Link>
+  const action =
+    pdfAction ??
+    (pdfKind ? (
+      <Button asChild variant="outline">
+        <a href={directionPdfHref(pdfKind, showId)} target="_blank" rel="noopener">
+          PDF
+        </a>
       </Button>
-      <PageHeader
-        title={title}
-        description={description}
-        actions={
-          pdfAction ??
-          (pdfKind ? (
-            <Button asChild variant="outline">
-              <a href={directionPdfHref(pdfKind, showId)} target="_blank" rel="noopener">
-                PDF
-              </a>
-            </Button>
-          ) : undefined)
-        }
-      />
-    </div>
+    ) : null);
+  return (
+    <header className="space-y-2">
+      <Link
+        href={directionHref(null, showId)}
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        ← Regie-Übersicht
+      </Link>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
+          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+    </header>
+  );
+}
+
+/** Filter als Link-Chips (Server-Komponenten, Zustand in der URL). */
+export function DirectionChips({
+  items,
+}: {
+  items: { href: string; label: string; active: boolean; count?: number }[];
+}) {
+  return (
+    <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          scroll={false}
+          aria-current={item.active ? "true" : undefined}
+          className={cn(
+            "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap transition-colors",
+            item.active
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card hover:bg-muted",
+          )}
+        >
+          {item.label}
+          {item.count !== undefined ? (
+            <span
+              className={cn("tabular-nums", item.active ? "opacity-80" : "text-muted-foreground")}
+            >
+              {item.count}
+            </span>
+          ) : null}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/** Kleine Zwischenüberschrift (Woche, Akt …). */
+export function DirectionGroupHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
   );
 }
 

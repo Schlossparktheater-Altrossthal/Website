@@ -1,7 +1,9 @@
-import Link from "next/link";
-
 import { AvailabilityPdfButton } from "@/components/regie/availability-pdf-picker";
-import { DirectionEmpty, DirectionViewHeader } from "@/components/regie/direction-ui";
+import {
+  DirectionChips,
+  DirectionEmpty,
+  DirectionViewHeader,
+} from "@/components/regie/direction-ui";
 import { DateBadge } from "@/components/ui/date-badge";
 import { StatTile } from "@/components/ui/stat-tile";
 import { loadDirectionAvailabilityView } from "@/lib/regie/availability";
@@ -29,24 +31,6 @@ import { redirectWithoutShow } from "../no-show";
 export const metadata = { title: "Verfügbarkeit · Regie" };
 
 const noon = (key: string) => new Date(`${key}T12:00:00Z`);
-
-function Chip({ href, active, children }: { href: string; active: boolean; children: string }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "inline-flex h-9 items-center rounded-full border px-3 text-sm whitespace-nowrap transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card hover:bg-muted",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
 
 type Person = { id: string; name: string; roles: string[]; reason: string | null };
 
@@ -104,7 +88,7 @@ export default async function DirectionAvailabilityPage({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <DirectionViewHeader
         title="Verfügbarkeit"
         description={`${describeAvailabilityRange(range)}: wer fehlt und warum`}
@@ -118,20 +102,20 @@ export default async function DirectionAvailabilityPage({
       />
 
       <div className="space-y-2">
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          {AVAILABILITY_MODES.map((mode) => (
-            <Chip key={mode} href={link({ ...range, mode })} active={range.mode === mode}>
-              {AVAILABILITY_MODE_LABELS[mode]}
-            </Chip>
-          ))}
-        </div>
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          {AVAILABILITY_WEEK_OPTIONS.map((weeks) => (
-            <Chip key={weeks} href={link({ ...range, weeks })} active={range.weeks === weeks}>
-              {weeks === 1 ? "diese Woche" : `${weeks} Wochen`}
-            </Chip>
-          ))}
-        </div>
+        <DirectionChips
+          items={AVAILABILITY_MODES.map((mode) => ({
+            href: link({ ...range, mode }),
+            label: AVAILABILITY_MODE_LABELS[mode],
+            active: range.mode === mode,
+          }))}
+        />
+        <DirectionChips
+          items={AVAILABILITY_WEEK_OPTIONS.map((weeks) => ({
+            href: link({ ...range, weeks }),
+            label: weeks === 1 ? "diese Woche" : `${weeks} Wochen`,
+            active: range.weeks === weeks,
+          }))}
+        />
       </div>
 
       {!view.members.length ? (
