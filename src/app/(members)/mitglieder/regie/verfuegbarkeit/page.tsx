@@ -131,7 +131,7 @@ export default async function DirectionAvailabilityPage({
           <div className="grid grid-cols-3 gap-2">
             <StatTile label="Tage" value={view.days.length} />
             <StatTile label="alle da" value={fullDays} />
-            <StatTile label="Personen fehlen" value={absenceCount.size} />
+            <StatTile label="fehlen" value={absenceCount.size} />
           </div>
 
           <ul className="space-y-3">

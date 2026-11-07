@@ -272,7 +272,7 @@ export default async function DirectionDashboardPage({
         />
 
         <DirectionCard
-          title="Szenen × Personen"
+          title="Szenen"
           summary={
             scenes.length
               ? `${scenes.length} ${scenes.length === 1 ? "Szene" : "Szenen"} · ${roles.length} ${roles.length === 1 ? "Rolle" : "Rollen"}`
