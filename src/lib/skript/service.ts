@@ -10,7 +10,10 @@ import { deleteObjects, getObject, isStorageConfigured, putObject } from "@/lib/
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { isPdf, parseScriptPdf } from "./import";
 import { countWords, roleKey, roleStatistics, type RoleTypoSuspect } from "./roles";
+import { mergeSceneUpdate } from "./scene-merge";
+import { readParts } from "./json";
 import { sceneTitleKey } from "./stats";
+import type { ScriptScene } from "./types";
 
 /** DB-Zugriff für Skript-Fassungen (docs/Plan/skript-plan.md, Phase 2). */
 
@@ -40,6 +43,8 @@ export type ScriptImportReport = {
   blocks: number;
   /** Mitwirkende aus dem Vorspann dieser Fassung. */
   credits: ScriptCredit[];
+  /** Einzeln geschickte Szenen, eingesetzt in die Vorfassung (`basedOnId`). */
+  sceneUpdate?: { baseLabel: string; replaced: { from: string; to: string }[]; added: string[] };
 };
 
 /** Bestätigte Schreibweisen des Stücks: normalisierter Schlüssel → Rollenname. */
@@ -100,7 +105,7 @@ export async function importScriptDraft(input: {
     userId: input.userId,
   };
 
-  const attempt = await tryParse(show.id, input.data);
+  const attempt = await tryParse(show.id, input.data, show.title);
   if (!attempt.ok) {
     // Ohne Speicher lässt sich nichts aufheben – dann wie früher sofort abweisen.
     if (!source) throw new ScriptImportError(attempt.message);
@@ -131,11 +136,15 @@ type ParseAttempt =
     >)
   | { ok: false; message: string; error: string };
 
-async function tryParse(showId: string, data: Uint8Array): Promise<ParseAttempt> {
+async function tryParse(
+  showId: string,
+  data: Uint8Array,
+  showTitle: string | null,
+): Promise<ParseAttempt> {
   const { aliases, known } = await loadRoleAliases(showId);
   let parsed: Awaited<ReturnType<typeof parseScriptPdf>>;
   try {
-    parsed = await parseScriptPdf(data, { aliases });
+    parsed = await parseScriptPdf(data, { aliases, showTitle });
   } catch (error) {
     console.error("[skript] PDF nicht lesbar", error);
     return {
@@ -169,31 +178,47 @@ async function saveVersion(
   },
   extra: Prisma.PrismaPromise<unknown>[] = [],
 ) {
-  const { known, blockCount } = parsed;
+  const { known } = parsed;
   const id = randomUUID();
+
+  const basedOn = await prisma.scriptVersion.findFirst({
+    where: { showId: show.id },
+    orderBy: [{ status: "desc" }, { createdAt: "desc" }],
+    select: { id: true, label: true },
+  });
+
+  // Einzeln geschickte Szenen → Vorfassung mit ausgetauschten Szenen.
+  const merge = basedOn
+    ? mergeSceneUpdate(await loadVersionScenes(basedOn.id), parsed.scenes)
+    : null;
+  const parsedScenes = merge?.scenes ?? parsed.scenes;
+  // Ersetzte Szene behält Schlüssel/Zeit der alten, auch wenn sich ihr Titel geändert hat.
+  const titleAlias = new Map(
+    (merge?.replaced ?? []).map((r) => [sceneTitleKey(r.to), sceneTitleKey(r.from)]),
+  );
+  const oldTitleKey = (title: string) =>
+    titleAlias.get(sceneTitleKey(title)) ?? sceneTitleKey(title);
+  const blockCount = parsedScenes.reduce((sum, scene) => sum + scene.blocks.length, 0);
 
   const report: ScriptImportReport = {
     mergedRoles: [...parsed.mergedRoles.entries()],
     roleTypos: parsed.roleTypos,
     uncertainCues: parsed.uncertainCues,
-    speakers: roleStatistics(parsed.scenes).map((r) => ({
+    speakers: roleStatistics(parsedScenes).map((r) => ({
       name: r.name,
       lines: r.lines,
       words: r.words,
       known: known.has(r.name),
     })),
-    scenes: parsed.scenes.length,
+    scenes: parsedScenes.length,
     blocks: blockCount,
     credits: parsed.credits,
+    ...(merge && basedOn
+      ? { sceneUpdate: { baseLabel: basedOn.label, replaced: merge.replaced, added: merge.added } }
+      : {}),
   };
   // Erste Fassung mit Angaben füllt die Mitwirkenden der Produktion; danach fragt der Prüfschritt.
   const saveCredits = parsed.credits.length > 0 && !readScriptCredits(show.scriptCredits).length;
-
-  const basedOn = await prisma.scriptVersion.findFirst({
-    where: { showId: show.id },
-    orderBy: [{ status: "desc" }, { createdAt: "desc" }],
-    select: { id: true },
-  });
 
   // Gemessene Szenenzeiten der Vorfassung übernehmen (gleicher Titel).
   const measured = new Map(
@@ -221,15 +246,15 @@ async function saveVersion(
   const scenes: Prisma.ScriptSceneCreateManyInput[] = [];
   const blocks: Prisma.ScriptBlockCreateManyInput[] = [];
   let sequence = 0;
-  parsed.scenes.forEach((scene, sceneIndex) => {
+  parsedScenes.forEach((scene, sceneIndex) => {
     const sceneId = randomUUID();
     scenes.push({
       id: sceneId,
       versionId: id,
       sequence: sceneIndex,
       title: scene.title,
-      sceneKey: titleKeys.get(sceneTitleKey(scene.title)) ?? randomUUID(),
-      measuredSeconds: measured.get(sceneTitleKey(scene.title)) ?? null,
+      sceneKey: titleKeys.get(oldTitleKey(scene.title)) ?? randomUUID(),
+      measuredSeconds: measured.get(oldTitleKey(scene.title)) ?? null,
     });
     for (const block of scene.blocks) {
       blocks.push({
@@ -256,7 +281,7 @@ async function saveVersion(
       data: {
         id,
         showId: show.id,
-        label: meta.label,
+        label: merge && basedOn ? `${basedOn.label} + ${meta.label}` : meta.label,
         versionDate: meta.versionDate,
         sourceBucket: source?.bucket ?? null,
         sourceKey: source?.key ?? null,
@@ -277,6 +302,33 @@ async function saveVersion(
     ...extra,
   ]);
   return { id, report };
+}
+
+/** Szenen einer gespeicherten Fassung als Parser-Ergebnis (für Szenen-Teillieferungen). */
+async function loadVersionScenes(versionId: string): Promise<ScriptScene[]> {
+  const scenes = await prisma.scriptScene.findMany({
+    where: { versionId },
+    orderBy: { sequence: "asc" },
+    select: {
+      title: true,
+      blocks: {
+        orderBy: { sequence: "asc" },
+        select: { kind: true, speaker: true, parts: true, page: true },
+      },
+    },
+  });
+  return scenes.map((scene) => ({
+    title: scene.title,
+    blocks: scene.blocks.map(
+      (block) =>
+        ({
+          kind: block.kind,
+          speaker: block.speaker,
+          page: block.page ?? 0,
+          parts: readParts(block.parts),
+        }) as ScriptScene["blocks"][number],
+    ),
+  }));
 }
 
 /** Aufgehobene PDFs eines Stücks, die der Parser noch nicht lesen konnte. */
@@ -306,13 +358,13 @@ export async function retryPendingImport(pendingId: string, userId: string) {
   if (!pending) throw new ScriptImportError("Upload nicht gefunden.", 404);
   const show = await prisma.show.findUniqueOrThrow({
     where: { id: pending.showId },
-    select: { id: true, scriptCredits: true },
+    select: { id: true, title: true, scriptCredits: true },
   });
   const object = await getObject(pending.sourceBucket, pending.sourceKey);
   if (!object.body) throw new ScriptImportError("Das Original-PDF ist leer.");
   const data = new Uint8Array(await new Response(object.body).arrayBuffer());
 
-  const attempt = await tryParse(show.id, data);
+  const attempt = await tryParse(show.id, data, show.title);
   if (!attempt.ok) {
     await prisma.scriptPendingImport.update({
       where: { id: pendingId },

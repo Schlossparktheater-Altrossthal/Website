@@ -11,14 +11,43 @@ export type ScriptFix =
   | { kind: "speaker"; startsWith: string; speaker: string }
   /** Szenentitel ersetzen; `nth` = welches Vorkommen (0-basiert), sonst alle. */
   | { kind: "scene"; title: string; to: string; nth?: number }
-  /** Text in Teilen ersetzen. */
-  | { kind: "text"; from: string; to: string }
+  /**
+   * Text in Teilen ersetzen. Mit `speakers` nur im gesprochenen Text dieser Rollen (Namen wie im
+   * PDF), mit `word` nur als ganzes Wort.
+   */
+  | { kind: "text"; from: string; to: string; speakers?: readonly string[]; word?: boolean }
   /** Rolle umbenennen (gleiche Figur, andere Schreibweise). */
   | { kind: "role"; from: string; to: string }
   /** Fetter Name war keine Rolle, sondern Teil einer Regieanweisung („Fogg und der Kapitän treten auf“). */
   | { kind: "direction"; speaker: string };
 
 export type ScriptFixSet = { name: string; match: RegExp; fixes: ScriptFix[] };
+
+/** Rollen in „In 80 Tagen um die Welt“, die Briten sind (Schreibweisen wie im PDF). */
+const BRITEN_80_TAGE = [
+  "Fogg",
+  "Fix",
+  "Stuart",
+  "Honeysuckle",
+  "Bankdirektor Humphrey Honeysuckle",
+  "Earl Grey",
+  "Earl of Earl Grey",
+  "Sotheby",
+  "Sothebys",
+  "Fairbanks",
+  "Sergeant Mayer",
+  "Sir Elton",
+  "Kapitän",
+  "Kapitän der Mongolia",
+  "Kapitän der Rangun",
+];
+
+/** Briten sprechen englisch an: Madame/Mademoiselle → Miss, Monsieur → Mister. */
+const ANREDE_BRITEN: ScriptFix[] = [
+  ["Madame", "Miss"],
+  ["Mademoiselle", "Miss"],
+  ["Monsieur", "Mister"],
+].map(([from, to]) => ({ kind: "text", from, to, speakers: BRITEN_80_TAGE, word: true }));
 
 export const SCRIPT_FIXES: readonly ScriptFixSet[] = [
   {
@@ -51,6 +80,7 @@ export const SCRIPT_FIXES: readonly ScriptFixSet[] = [
         from: "What a wonderful world\nI see skies of blue",
         to: "What a wonderful world\n\nI see skies of blue",
       },
+      ...ANREDE_BRITEN,
     ],
   },
 ];
@@ -60,7 +90,7 @@ function describe(fix: ScriptFix): string {
   if (fix.kind === "role") return `Rolle „${fix.from}“ → „${fix.to}“`;
   if (fix.kind === "direction") return `„${fix.speaker}“ ist Regie`;
   if (fix.kind === "scene") return `Szene „${fix.title}“ → „${fix.to}“`;
-  return `Text „${fix.from}“ → „${fix.to}“`;
+  return `Text „${fix.from}“ → „${fix.to}“${fix.speakers ? " (Briten)" : ""}`;
 }
 
 function applyFix(scenes: ScriptScene[], fix: ScriptFix): boolean {
@@ -90,10 +120,22 @@ function applyFix(scenes: ScriptScene[], fix: ScriptFix): boolean {
   }
   if (fix.kind === "text") {
     let hit = false;
-    for (const part of scenes.flatMap((s) => s.blocks).flatMap((b) => b.parts)) {
-      if (!part.text.includes(fix.from)) continue;
-      part.text = part.text.split(fix.from).join(fix.to);
-      hit = true;
+    const speakers = fix.speakers && new Set(fix.speakers);
+    const pattern = fix.word
+      ? new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(fix.from)}(?![\\p{L}\\p{N}])`, "gu")
+      : null;
+    for (const block of scenes.flatMap((s) => s.blocks)) {
+      if (speakers && !(block.speaker && speakers.has(block.speaker))) continue;
+      for (const part of block.parts) {
+        // Mit Rollen nur Gesprochenes, nicht Regie/Hinweise.
+        if (speakers && part.kind !== "text") continue;
+        const next = pattern
+          ? part.text.replace(pattern, fix.to)
+          : part.text.split(fix.from).join(fix.to);
+        if (next === part.text) continue;
+        part.text = next;
+        hit = true;
+      }
     }
     return hit;
   }
@@ -119,13 +161,21 @@ function applyFix(scenes: ScriptScene[], fix: ScriptFix): boolean {
   return false;
 }
 
-/** Passende Korrekturen anwenden (ändert `scenes`). */
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Passende Korrekturen anwenden (ändert `scenes`). `showTitle` (Titel der Produktion) zählt mit,
+ * damit auch einzeln geschickte Szenen ohne Titelseite erkannt werden.
+ */
 export function applyScriptFixes(
   scenes: ScriptScene[],
   frontMatter: string[],
   sets: readonly ScriptFixSet[] = SCRIPT_FIXES,
+  showTitle?: string | null,
 ): { applied: string[]; missed: string[] } {
-  const head = frontMatter.slice(0, 10).join("\n");
+  const head = [...(showTitle ? [showTitle] : []), ...frontMatter.slice(0, 10)].join("\n");
   const applied: string[] = [];
   const missed: string[] = [];
   for (const set of sets) {

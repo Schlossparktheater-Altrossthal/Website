@@ -44,6 +44,14 @@ const reportSchema = z.object({
   scenes: z.number().default(0),
   blocks: z.number().default(0),
   credits: z.array(scriptCreditSchema).catch([]).default([]),
+  sceneUpdate: z
+    .object({
+      baseLabel: z.string(),
+      replaced: z.array(z.object({ from: z.string(), to: z.string() })),
+      added: z.array(z.string()),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 export function readImportReport(value: unknown): ScriptImportReport {

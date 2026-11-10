@@ -25,7 +25,12 @@ export type ParsedScript = {
 /** PDF einlesen: Profil automatisch wählen, parsen, Rollen zusammenführen. */
 export async function parseScriptPdf(
   data: Uint8Array,
-  options: { profiles?: readonly ScriptProfile[]; aliases?: ReadonlyMap<string, string> } = {},
+  options: {
+    profiles?: readonly ScriptProfile[];
+    aliases?: ReadonlyMap<string, string>;
+    /** Titel der Produktion: Korrekturen greifen so auch bei Einzelszenen ohne Titelseite. */
+    showTitle?: string | null;
+  } = {},
 ): Promise<ParsedScript> {
   const profiles = options.profiles ?? SCRIPT_PROFILES;
   let best: {
@@ -51,7 +56,7 @@ export async function parseScriptPdf(
     }
   }
   if (!best) throw new Error("Kein Skript-Profil registriert");
-  const fixes = applyScriptFixes(best.scenes, best.front);
+  const fixes = applyScriptFixes(best.scenes, best.front, undefined, options.showTitle);
   const mergedRoles = resolveRoleNames(best.scenes, options.aliases);
   const scenes = normalizeRoles(best.scenes, mergedRoles);
   const { front: _front, ...rest } = best;
