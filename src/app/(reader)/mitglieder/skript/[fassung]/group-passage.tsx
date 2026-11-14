@@ -52,6 +52,12 @@ export function GroupMembersLine({
   );
 }
 
+const MODE_LABELS = {
+  cast: "alle Besetzten",
+  present: "wer in der Szene spricht",
+  fixed: "feste Liste",
+} as const;
+
 const LEVEL_LABELS: Record<GroupPassageLevel, string> = {
   block: "Nur dieser Absatz",
   scene: "Ganze Szene",
@@ -122,6 +128,9 @@ export function GroupPassageSheet({
   };
 
   const current = group?.levels[level];
+  const known = (block?.memberRoleIds ?? [])
+    .map((id) => names.get(id) ?? data?.people.find((p) => p.id === id)?.name)
+    .filter((n): n is string => !!n);
   const hasOwn = (l: GroupPassageLevel) =>
     !!group && group.levels[l].roleIds.length + group.levels[l].setIds.length > 0;
   const baseHint =
@@ -146,12 +155,18 @@ export function GroupPassageSheet({
       {block ? (
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-medium">Aktuell ({block.memberRoleIds.length})</p>
+            <p className="text-sm font-medium">Aktuell ({known.length})</p>
             <p className="text-sm text-muted-foreground">
-              {block.memberRoleIds.length
-                ? block.memberRoleIds.map((id) => names.get(id) ?? "?").join(", ")
-                : "niemand"}
+              {known.length ? known.join(", ") : "niemand"}
             </p>
+            {group ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Grundregel von „{group.name}“: {MODE_LABELS[group.groupMode]}
+                {group.groupMode === "cast"
+                  ? " – meist zu viele. Umstellen unter Stück → Skript → Rollen."
+                  : ""}
+              </p>
+            ) : null}
           </div>
           {!canManage ? null : !data || !group ? (
             <p className="text-sm text-muted-foreground">Lädt …</p>
