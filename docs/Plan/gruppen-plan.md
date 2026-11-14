@@ -67,7 +67,26 @@ weil die Auflösung dort schon passiert; Stück-Rollen kommen über `ScriptRoleL
 6. **E2E + Screenshots** mobil/desktop, Lernmodus prüft, dass Gruppenpassagen nur bei Mitgliedern
    erscheinen.
 
-## Entscheidungen offen
+## Entscheidungen (2026-11-14)
+
+- E1: Personengruppen an Skript-Rollen.
+- E2: Ändern im Leser nur mit `SCRIPT.MANAGE`.
+- E3: „spricht mit …“ sehen alle.
+- Neu: Hauptproblem ist, dass „Alle“-Passagen im Leser/Lernmodus Leuten angezeigt werden, die
+  nicht gemeint sind. Neue Gruppen starten deshalb mit „wer in der Szene ist“ statt „alle
+  Besetzten“ (ersetzt E-U1 aus `skript-uebernahme-plan.md`). Bestehende Gruppen bleiben, wie sie
+  sind – „Alle Besetzten“ bei Bedarf von Hand umstellen.
+- Umsetzung abweichend vom Entwurf oben: eigene Tabelle `ScriptGroupSetRule` statt `memberSetId`
+  an `ScriptGroupRule` – Zusammenführen/Rückgängig bleiben unverändert, Personengruppen werden beim
+  Laden zu Einzelregeln (`expandSetRules`).
+
+## Stand
+
+- [x] Phase 1–4 auf main (Personengruppen, Gruppen oben, „spricht mit …“, „Wer spricht hier?“)
+- [ ] Phase 5 Zähler „noch auf Standard“
+- [ ] Phase 6 E2E
+
+## Entscheidungen offen (erledigt, siehe oben)
 
 - E1: Sets an Skript-Rollen (Vorschlag) oder Stück-Rollen.
 - E2: Dürfen auch Gewerksleitung/Regieassistenz Gruppen im Leser ändern, oder nur `SCRIPT.MANAGE`?

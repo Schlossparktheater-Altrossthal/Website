@@ -4,7 +4,13 @@ import { DIRECTION_TEAM_TEMPLATE_SLUGS } from "@/lib/regie/wishes";
 
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { readParts } from "./json";
-import { resolveGroupMembers, roleIdsByUser, type LinkRole, type RoleKind } from "./role-links";
+import {
+  expandSetRules,
+  resolveGroupMembers,
+  roleIdsByUser,
+  type LinkRole,
+  type RoleKind,
+} from "./role-links";
 import { roleKey, splitSpeakerRoles } from "./roles";
 import { isSpoken, type ScriptBlockKind, type ScriptPart } from "./types";
 
@@ -129,6 +135,15 @@ export async function loadScriptReader(
             mode: true,
           },
         },
+        setGroupRules: {
+          select: {
+            groupRoleId: true,
+            sceneKey: true,
+            lineageId: true,
+            mode: true,
+            set: { select: { members: { select: { roleId: true } } } },
+          },
+        },
       },
     }),
     prisma.characterCasting.findMany({
@@ -242,7 +257,15 @@ export async function loadScriptReader(
     blocks,
     version.scenes,
     linkRoles,
-    scriptRoles.flatMap((r) => r.groupRules),
+    expandSetRules(
+      scriptRoles.flatMap((r) => r.groupRules),
+      scriptRoles.flatMap((r) =>
+        r.setGroupRules.map(({ set, ...rule }) => ({
+          ...rule,
+          memberRoleIds: set.members.map((m) => m.roleId),
+        })),
+      ),
+    ),
     byUser,
   );
 

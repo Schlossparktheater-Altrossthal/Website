@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   blockHasRole,
+  expandSetRules,
   learnRoleIds,
   resolveGroupMembers,
   roleIdsByUser,
@@ -143,5 +144,90 @@ describe("blockHasRole / learnRoleIds", () => {
     expect(learnRoleIds(block, new Set(["a"]), true, new Set(["g"]))).toEqual(["g"]);
     expect(learnRoleIds(block, new Set(["a"]), false, new Set(["g"]))).toEqual([]);
     expect(learnRoleIds({ roleIds: ["a"] }, new Set(["a"]), true, new Set())).toEqual(["a"]);
+  });
+});
+
+describe("expandSetRules (Personengruppen)", () => {
+  const group = { id: "alle", groupMode: "present" as const };
+  const block = { lineageId: "l1", sceneKey: "s1", roleIds: ["alle"] };
+
+  it("löst eine Personengruppe an einem Absatz in ihre Rollen auf", () => {
+    const rules = expandSetRules(
+      [],
+      [
+        {
+          groupRoleId: "alle",
+          sceneKey: null,
+          lineageId: "l1",
+          mode: "include",
+          memberRoleIds: ["a", "b"],
+        },
+      ],
+    );
+    expect(
+      resolveGroupMembers({
+        group,
+        rules,
+        block,
+        castRoleIds: ["a", "b", "c", "d"],
+        sceneRoleIds: ["a", "b", "c"],
+      }).sort(),
+    ).toEqual(["a", "b"]);
+  });
+
+  it("kombiniert Personengruppe und einzelne Rolle auf derselben Ebene", () => {
+    const rules = expandSetRules(
+      [
+        {
+          groupRoleId: "alle",
+          memberRoleId: "d",
+          sceneKey: "s1",
+          lineageId: null,
+          mode: "include",
+        },
+      ],
+      [
+        {
+          groupRoleId: "alle",
+          sceneKey: "s1",
+          lineageId: null,
+          mode: "include",
+          memberRoleIds: ["a"],
+        },
+      ],
+    );
+    expect(
+      resolveGroupMembers({
+        group,
+        rules,
+        block,
+        castRoleIds: ["a", "b", "c", "d"],
+        sceneRoleIds: ["a", "b", "c"],
+      }).sort(),
+    ).toEqual(["a", "d"]);
+  });
+
+  it("schließt eine Personengruppe in der Grundregel aus", () => {
+    const rules = expandSetRules(
+      [],
+      [
+        {
+          groupRoleId: "alle",
+          sceneKey: null,
+          lineageId: null,
+          mode: "exclude",
+          memberRoleIds: ["c"],
+        },
+      ],
+    );
+    expect(
+      resolveGroupMembers({
+        group,
+        rules,
+        block,
+        castRoleIds: [],
+        sceneRoleIds: ["a", "b", "c"],
+      }).sort(),
+    ).toEqual(["a", "b"]);
   });
 });

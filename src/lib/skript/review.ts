@@ -279,12 +279,15 @@ async function requireDraft(versionId: string) {
   return version;
 }
 
-/** Gruppen am Namen erkennen; „Alle …“ = alle Besetzten (E-U1), sonst wer in der Szene ist. */
+/**
+ * Gruppen am Namen erkennen. Standard ist „wer in der Szene ist“ – auch für „Alle …“: „Alle“
+ * meint fast nie das ganze Ensemble (docs/Plan/gruppen-plan.md, ersetzt E-U1).
+ */
 export function defaultRoleKind(
   name: string,
 ): Pick<Prisma.ScriptRoleCreateManyInput, "kind" | "groupMode"> {
   if (!isEnsembleRole(name)) return {};
-  return { kind: "group", groupMode: /^alle\b/iu.test(name) ? "cast" : "present" };
+  return { kind: "group", groupMode: "present" };
 }
 
 export type RoleAssignment = { name: string } & (

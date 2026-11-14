@@ -12,6 +12,10 @@ import {
 import { requireAuth } from "@/lib/rbac";
 import {
   ScriptRoleAdminError,
+  deleteScriptRoleSet,
+  loadGroupPassage,
+  type GroupPassageData,
+  saveScriptRoleSet,
   mergeScriptRoles,
   renameScriptRole,
   resetScriptRoleLinks,
@@ -115,6 +119,8 @@ const rulesSchema = z.object({
   lineageId: z.string().max(64).nullable(),
   include: z.array(id).max(200),
   exclude: z.array(id).max(200),
+  includeSets: z.array(id).max(50).optional(),
+  excludeSets: z.array(id).max(50).optional(),
 });
 
 export async function saveScriptGroupRulesAction(
@@ -146,4 +152,52 @@ export async function splitScriptRoleAction(
       splitScriptRole({ showId, roleId: id.parse(roleId), userId, ...splitSchema.parse(input) }),
     "Rolle getrennt",
   );
+}
+
+const setSchema = z.object({
+  setId: id.nullable(),
+  name: z.string().trim().min(1).max(80),
+  memberRoleIds: z.array(id).max(200),
+});
+
+/** Personengruppe anlegen/ändern (docs/Plan/gruppen-plan.md). */
+export async function saveScriptRoleSetAction(
+  showId: string,
+  input: unknown,
+): Promise<ProductionActionResult> {
+  return run(
+    showId,
+    "Personengruppe konnte nicht gespeichert werden.",
+    () => saveScriptRoleSet({ showId, ...setSchema.parse(input) }),
+    "Personengruppe gespeichert",
+  );
+}
+
+export async function deleteScriptRoleSetAction(
+  showId: string,
+  setId: string,
+): Promise<ProductionActionResult> {
+  return run(
+    showId,
+    "Personengruppe konnte nicht gelöscht werden.",
+    () => deleteScriptRoleSet(showId, id.parse(setId)),
+    "Personengruppe gelöscht",
+  );
+}
+
+/** Leser: „Wer spricht hier?“ laden (nur wer das Skript verwalten darf, E2). */
+export async function loadGroupPassageAction(
+  versionId: string,
+  lineageId: string,
+): Promise<{ ok: true; data: GroupPassageData } | { ok: false; error: string }> {
+  try {
+    const data = await loadGroupPassage(id.parse(versionId), id.parse(lineageId));
+    await requireManager(data.showId);
+    return { ok: true, data };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof ScriptRoleAdminError ? error.message : "Konnte nicht laden.",
+    };
+  }
 }

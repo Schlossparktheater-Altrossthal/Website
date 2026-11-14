@@ -166,3 +166,18 @@ export function learnRoleIds(
   if (!block.memberRoleIds?.some((id) => selected.has(id))) return [];
   return block.roleIds.filter((id) => groupRoleIds.has(id));
 }
+
+export type GroupSetRule = Omit<GroupRule, "memberRoleId"> & { memberRoleIds: string[] };
+
+/**
+ * Regeln mit Personengruppe (docs/Plan/gruppen-plan.md) in Einzelregeln je Rolle auflösen –
+ * mit den aktuellen Mitgliedern der Personengruppe.
+ */
+export function expandSetRules(rules: GroupRule[], setRules: GroupSetRule[]): GroupRule[] {
+  return [
+    ...rules,
+    ...setRules.flatMap(({ memberRoleIds, ...rule }) =>
+      memberRoleIds.map((memberRoleId) => ({ ...rule, memberRoleId })),
+    ),
+  ];
+}
