@@ -567,6 +567,7 @@ model Show {
   scriptVersions          ScriptVersion[]
   scriptPendingImports    ScriptPendingImport[]
   scriptRoles             ScriptRole[]
+  scriptRoleSets          ScriptRoleSet[]
   scriptRoleMerges        ScriptRoleMerge[]
   scriptSceneLinks        ScriptSceneLink[]
   scriptAnnotations       ScriptAnnotation[]
@@ -4231,12 +4232,12 @@ model ScriptScene {
 
 /// Rolle im Skript eines Stücks; `aliases` sind bestätigte Schreibweisen (normalisiert).
 model ScriptRole {
-  id             String            @id @default(cuid())
+  id             String                @id @default(cuid())
   showId         String
   name           String
-  aliases        String[]          @default([])
+  aliases        String[]              @default([])
   /// Person, Gruppe („Alle“, „Chor“) oder ignorieren (docs/Plan/skript-uebernahme-plan.md).
-  kind           ScriptRoleKind    @default(person)
+  kind           ScriptRoleKind        @default(person)
   /// Nur bei Gruppen: wer standardmäßig dazugehört.
   groupMode      ScriptGroupMode?
   /// Gesetzt, sobald die Stück-Rollen von Hand zugeordnet wurden; vorher gilt Namensgleichheit.
@@ -4244,17 +4245,19 @@ model ScriptRole {
   /// Abgetrennt von dieser Rolle (Phase 5): neue Fassungen geben ihr die Absätze der alten Rolle
   /// in diesen Szenen (`ScriptScene.sceneKey`).
   splitFromId    String?
-  splitSceneKeys String[]          @default([])
+  splitSceneKeys String[]              @default([])
   createdById    String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  show           Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
-  createdBy      User?             @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  show           Show                  @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdBy      User?                 @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
   blocks         ScriptBlockRole[]
   learnCards     ScriptLearnCard[]
   links          ScriptRoleLink[]
-  groupRules     ScriptGroupRule[] @relation("ScriptGroupRuleGroup")
-  memberRules    ScriptGroupRule[] @relation("ScriptGroupRuleMember")
+  groupRules     ScriptGroupRule[]     @relation("ScriptGroupRuleGroup")
+  memberRules    ScriptGroupRule[]     @relation("ScriptGroupRuleMember")
+  setGroupRules  ScriptGroupSetRule[]
+  setMembers     ScriptRoleSetMember[]
 
   @@unique([showId, name])
 }
@@ -4277,6 +4280,49 @@ enum ScriptGroupMode {
 enum ScriptGroupRuleMode {
   include
   exclude
+}
+
+/// Benannte Personengruppe im Skript („Jugendliche“, „Händler“) – docs/Plan/gruppen-plan.md.
+/// Wird in Gruppenregeln als Ganzes gewählt und erst beim Auflösen zu ihren Rollen.
+model ScriptRoleSet {
+  id        String                @id @default(cuid())
+  showId    String
+  name      String
+  order     Int                   @default(0)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  show      Show                  @relation(fields: [showId], references: [id], onDelete: Cascade)
+  members   ScriptRoleSetMember[]
+  rules     ScriptGroupSetRule[]
+
+  @@unique([showId, name])
+}
+
+model ScriptRoleSetMember {
+  setId  String
+  roleId String
+  set    ScriptRoleSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  role   ScriptRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([setId, roleId])
+  @@index([roleId])
+}
+
+/// Wie `ScriptGroupRule`, aber mit einer ganzen Personengruppe als Mitglied.
+model ScriptGroupSetRule {
+  id          String              @id @default(cuid())
+  groupRoleId String
+  setId       String
+  sceneKey    String?
+  lineageId   String?
+  mode        ScriptGroupRuleMode @default(include)
+  createdById String?
+  createdAt   DateTime            @default(now())
+  groupRole   ScriptRole          @relation(fields: [groupRoleId], references: [id], onDelete: Cascade)
+  set         ScriptRoleSet       @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@index([groupRoleId])
+  @@index([setId])
 }
 
 /// Skript-Rolle → Stück-Rolle(n). Ersetzt die Namensgleichheit, sobald `ScriptRole.linkedAt` gesetzt ist.

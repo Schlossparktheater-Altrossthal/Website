@@ -44,6 +44,18 @@ export type AdminGroupRule = {
   mode: "include" | "exclude";
 };
 
+/** Regel mit einer Personengruppe als Mitglied (docs/Plan/gruppen-plan.md). */
+export type AdminGroupSetRule = {
+  id: string;
+  groupRoleId: string;
+  setId: string;
+  sceneKey: string | null;
+  lineageId: string | null;
+  mode: "include" | "exclude";
+};
+
+export type AdminRoleSet = { id: string; name: string; memberRoleIds: string[] };
+
 export type AdminGroupBlock = {
   lineageId: string;
   sceneKey: string;
@@ -61,6 +73,8 @@ export type ScriptRoleAdminData = {
   scenes: { sceneKey: string; title: string }[];
   groupBlocks: AdminGroupBlock[];
   rules: AdminGroupRule[];
+  setRules: AdminGroupSetRule[];
+  sets: AdminRoleSet[];
   merges: {
     id: string;
     targetRoleId: string;
@@ -88,7 +102,7 @@ async function currentVersion(showId: string) {
 
 export async function loadScriptRoleAdmin(showId: string): Promise<ScriptRoleAdminData> {
   const version = await currentVersion(showId);
-  const [roles, characters, rules, merges, reader] = await Promise.all([
+  const [roles, characters, rules, setRules, sets, merges, reader] = await Promise.all([
     prisma.scriptRole.findMany({
       where: { showId },
       orderBy: { name: "asc" },
@@ -125,6 +139,23 @@ export async function loadScriptRoleAdmin(showId: string): Promise<ScriptRoleAdm
         lineageId: true,
         mode: true,
       },
+    }),
+    prisma.scriptGroupSetRule.findMany({
+      where: { groupRole: { showId } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        groupRoleId: true,
+        setId: true,
+        sceneKey: true,
+        lineageId: true,
+        mode: true,
+      },
+    }),
+    prisma.scriptRoleSet.findMany({
+      where: { showId },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, members: { select: { roleId: true } } },
     }),
     prisma.scriptRoleMerge.findMany({
       where: { showId, undoneAt: null },
@@ -211,6 +242,12 @@ export async function loadScriptRoleAdmin(showId: string): Promise<ScriptRoleAdm
     scenes,
     groupBlocks,
     rules,
+    setRules,
+    sets: sets.map((set) => ({
+      id: set.id,
+      name: set.name,
+      memberRoleIds: set.members.map((m) => m.roleId),
+    })),
     merges: merges.map((merge) => ({
       id: merge.id,
       targetRoleId: merge.targetRoleId,
@@ -316,6 +353,9 @@ const mergeSourceSchema = z.object({
       mode: z.enum(["include", "exclude"]),
     }),
   ),
+  /** Personengruppen der Rolle bzw. was die Zielrolle davon neu bekam (ältere Protokolle: leer). */
+  setIds: z.array(z.string()).default([]),
+  addedSetIds: z.array(z.string()).default([]),
 });
 type MergeSource = z.infer<typeof mergeSourceSchema>;
 
@@ -417,6 +457,23 @@ export async function mergeScriptRoles(
       where: { id: { in: memberRules.map((r) => r.id) } },
       data: { memberRoleId: targetId },
     });
+    // Personengruppen: die Zielrolle übernimmt die Mitgliedschaften (Rückgängig nimmt sie zurück).
+    const sourceSets = await tx.scriptRoleSetMember.findMany({
+      where: { roleId: sourceId },
+      select: { setId: true },
+    });
+    const targetSets = new Set(
+      (
+        await tx.scriptRoleSetMember.findMany({
+          where: { roleId: targetId },
+          select: { setId: true },
+        })
+      ).map((m) => m.setId),
+    );
+    const addedSetIds = sourceSets.map((m) => m.setId).filter((id) => !targetSets.has(id));
+    await tx.scriptRoleSetMember.createMany({
+      data: addedSetIds.map((setId) => ({ setId, roleId: targetId })),
+    });
     const droppedRules = await tx.scriptGroupRule.findMany({
       where: { OR: [{ groupRoleId: sourceId }, { memberRoleId: sourceId }] },
       select: {
@@ -443,6 +500,8 @@ export async function mergeScriptRoles(
       targetLinkedAt: target.linkedAt?.toISOString() ?? null,
       movedRuleIds: memberRules.map((r) => r.id),
       droppedRules,
+      setIds: sourceSets.map((m) => m.setId),
+      addedSetIds,
     };
     await tx.scriptRole.delete({ where: { id: sourceId } });
     return tx.scriptRoleMerge.create({
@@ -545,6 +604,17 @@ export async function undoScriptRoleMerge(showId: string, mergeId: string) {
         (r) => roleIds.has(r.groupRoleId) && roleIds.has(r.memberRoleId),
       ),
     });
+    const sets = await tx.scriptRoleSet.findMany({
+      where: { showId, id: { in: source.setIds } },
+      select: { id: true },
+    });
+    await tx.scriptRoleSetMember.createMany({
+      data: sets.map((set) => ({ setId: set.id, roleId: source.id })),
+      skipDuplicates: true,
+    });
+    await tx.scriptRoleSetMember.deleteMany({
+      where: { roleId: target.id, setId: { in: source.addedSetIds } },
+    });
     await tx.scriptRoleMerge.update({ where: { id: merge.id }, data: { undoneAt: new Date() } });
   });
 }
@@ -560,8 +630,12 @@ export async function setScriptGroupRules(input: {
   lineageId: string | null;
   include: string[];
   exclude: string[];
+  includeSets?: string[];
+  excludeSets?: string[];
   userId: string;
 }) {
+  const includeSets = input.includeSets ?? [];
+  const excludeSets = input.excludeSets ?? [];
   const group = await prisma.scriptRole.findFirst({
     where: { id: input.groupRoleId, showId: input.showId },
     select: { kind: true },
@@ -576,6 +650,14 @@ export async function setScriptGroupRules(input: {
       })
     ).map((r) => r.id),
   );
+  const setIds = new Set(
+    (
+      await prisma.scriptRoleSet.findMany({
+        where: { showId: input.showId, id: { in: [...includeSets, ...excludeSets] } },
+        select: { id: true },
+      })
+    ).map((set) => set.id),
+  );
   const level = {
     groupRoleId: input.groupRoleId,
     sceneKey: input.lineageId ? null : input.sceneKey,
@@ -583,6 +665,15 @@ export async function setScriptGroupRules(input: {
   };
   await prisma.$transaction([
     prisma.scriptGroupRule.deleteMany({ where: level }),
+    prisma.scriptGroupSetRule.deleteMany({ where: level }),
+    prisma.scriptGroupSetRule.createMany({
+      data: [
+        ...includeSets.map((setId) => ({ setId, mode: "include" as const })),
+        ...excludeSets.map((setId) => ({ setId, mode: "exclude" as const })),
+      ]
+        .filter((rule) => setIds.has(rule.setId))
+        .map((rule) => ({ ...level, ...rule, createdById: input.userId })),
+    }),
     prisma.scriptGroupRule.createMany({
       data: [
         ...input.include.map((id) => ({ memberRoleId: id, mode: "include" as const })),
@@ -695,4 +786,162 @@ export async function applyRoleSplits(showId: string, versionId: string) {
     }
     return moved;
   });
+}
+
+/** Personengruppe anlegen oder ändern (Name + Mitglieder, nur Personen-Rollen). */
+export async function saveScriptRoleSet(input: {
+  showId: string;
+  setId: string | null;
+  name: string;
+  memberRoleIds: string[];
+}) {
+  const name = input.name.trim();
+  if (!name) throw new ScriptRoleAdminError("Name fehlt.");
+  const clash = await prisma.scriptRoleSet.findFirst({
+    where: { showId: input.showId, name, ...(input.setId ? { id: { not: input.setId } } : {}) },
+    select: { id: true },
+  });
+  if (clash) throw new ScriptRoleAdminError(`„${name}“ gibt es schon.`);
+  const members = (
+    await prisma.scriptRole.findMany({
+      where: { showId: input.showId, id: { in: input.memberRoleIds }, kind: "person" },
+      select: { id: true },
+    })
+  ).map((r) => r.id);
+  return prisma.$transaction(async (tx) => {
+    let setId = input.setId;
+    if (setId) {
+      const found = await tx.scriptRoleSet.findFirst({
+        where: { id: setId, showId: input.showId },
+        select: { id: true },
+      });
+      if (!found) throw new ScriptRoleAdminError("Personengruppe nicht gefunden.");
+      await tx.scriptRoleSet.update({ where: { id: setId }, data: { name } });
+      await tx.scriptRoleSetMember.deleteMany({ where: { setId } });
+    } else {
+      setId = (
+        await tx.scriptRoleSet.create({
+          data: { showId: input.showId, name },
+          select: { id: true },
+        })
+      ).id;
+    }
+    await tx.scriptRoleSetMember.createMany({
+      data: members.map((roleId) => ({ setId: setId!, roleId })),
+    });
+    return { id: setId };
+  });
+}
+
+/** Personengruppe löschen – Regeln, die sie nutzen, entfallen mit. */
+export async function deleteScriptRoleSet(showId: string, setId: string) {
+  const { count } = await prisma.scriptRoleSet.deleteMany({ where: { id: setId, showId } });
+  if (!count) throw new ScriptRoleAdminError("Personengruppe nicht gefunden.");
+}
+
+export type GroupPassageLevel = "block" | "scene" | "base";
+
+/** Alles für „Wer spricht hier?“ an einer Gruppenpassage im Leser (docs/Plan/gruppen-plan.md). */
+export type GroupPassageData = {
+  showId: string;
+  sceneKey: string;
+  sceneTitle: string;
+  groups: {
+    id: string;
+    name: string;
+    groupMode: GroupMode;
+    /** Auswahl je Ebene („Nur …“); bei `base` und nicht-fester Grundregel: wer *nicht* dabei ist. */
+    levels: Record<GroupPassageLevel, { roleIds: string[]; setIds: string[] }>;
+  }[];
+  people: { id: string; name: string }[];
+  sets: AdminRoleSet[];
+};
+
+export async function loadGroupPassage(
+  versionId: string,
+  lineageId: string,
+): Promise<GroupPassageData> {
+  const block = await prisma.scriptBlock.findFirst({
+    where: { versionId, lineageId },
+    select: {
+      version: { select: { showId: true } },
+      scene: { select: { sceneKey: true, title: true } },
+      roles: {
+        select: { role: { select: { id: true, name: true, kind: true, groupMode: true } } },
+      },
+    },
+  });
+  if (!block) throw new ScriptRoleAdminError("Absatz nicht gefunden.");
+  const showId = block.version.showId;
+  const groups = block.roles.map((r) => r.role).filter((r) => r.kind === "group");
+  if (!groups.length) throw new ScriptRoleAdminError("Der Absatz gehört keiner Gruppe.");
+  const groupIds = groups.map((g) => g.id);
+  const [rules, setRules, sets, people] = await Promise.all([
+    prisma.scriptGroupRule.findMany({
+      where: { groupRoleId: { in: groupIds } },
+      select: {
+        groupRoleId: true,
+        memberRoleId: true,
+        sceneKey: true,
+        lineageId: true,
+        mode: true,
+      },
+    }),
+    prisma.scriptGroupSetRule.findMany({
+      where: { groupRoleId: { in: groupIds } },
+      select: { groupRoleId: true, setId: true, sceneKey: true, lineageId: true, mode: true },
+    }),
+    prisma.scriptRoleSet.findMany({
+      where: { showId },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, members: { select: { roleId: true } } },
+    }),
+    prisma.scriptRole.findMany({
+      where: { showId, kind: "person" },
+      select: { id: true, name: true, _count: { select: { blocks: true } } },
+    }),
+  ]);
+  const sceneKey = block.scene.sceneKey;
+  const pick = (
+    groupId: string,
+    match: (r: { sceneKey: string | null; lineageId: string | null }) => boolean,
+    mode: "include" | "exclude",
+  ) => ({
+    roleIds: rules
+      .filter((r) => r.groupRoleId === groupId && r.mode === mode && match(r))
+      .map((r) => r.memberRoleId),
+    setIds: setRules
+      .filter((r) => r.groupRoleId === groupId && r.mode === mode && match(r))
+      .map((r) => r.setId),
+  });
+  return {
+    showId,
+    sceneKey,
+    sceneTitle: block.scene.title,
+    groups: groups.map((group) => {
+      const groupMode = group.groupMode ?? "present";
+      return {
+        id: group.id,
+        name: group.name,
+        groupMode,
+        levels: {
+          block: pick(group.id, (r) => r.lineageId === lineageId, "include"),
+          scene: pick(group.id, (r) => r.sceneKey === sceneKey && !r.lineageId, "include"),
+          base: pick(
+            group.id,
+            (r) => !r.sceneKey && !r.lineageId,
+            groupMode === "fixed" ? "include" : "exclude",
+          ),
+        },
+      };
+    }),
+    people: people
+      .sort((a, b) => b._count.blocks - a._count.blocks || a.name.localeCompare(b.name, "de"))
+      .map(({ id, name }) => ({ id, name })),
+    sets: sets.map((set) => ({
+      id: set.id,
+      name: set.name,
+      memberRoleIds: set.members.map((m) => m.roleId),
+    })),
+  };
 }

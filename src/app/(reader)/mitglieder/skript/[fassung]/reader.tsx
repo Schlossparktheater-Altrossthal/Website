@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { GroupMembersLine, GroupPassageSheet } from "./group-passage";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -396,6 +397,8 @@ type BlockViewProps = {
   noteEditor: React.ReactNode;
   /** Diese Notiz steckt im Editor und wird nicht doppelt gezeigt. */
   editingId: string | null;
+  /** Gruppenpassage („Alle“): Zeile „spricht mit …“. */
+  groupLine?: React.ReactNode;
 };
 
 const BlockView = React.memo(
@@ -415,6 +418,7 @@ const BlockView = React.memo(
       noteRange,
       noteEditor,
       editingId,
+      groupLine,
     },
     ref,
   ) {
@@ -619,6 +623,7 @@ const BlockView = React.memo(
           </span>
           <span>{renderParts()}</span>
         </p>
+        {groupLine ? <div className="md:col-span-2 md:col-start-2">{groupLine}</div> : null}
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
           {showPage ? (block.page ?? "") : ""}
         </span>
@@ -960,6 +965,11 @@ export function ScriptReader({
     () => new Map(roles.map((role) => [role.id, role.name])),
     [roles],
   );
+  const groupRoleIds = React.useMemo(
+    () => new Set(roles.filter((role) => role.kind === "group").map((role) => role.id)),
+    [roles],
+  );
+  const [groupBlockId, setGroupBlockId] = React.useState<string | null>(null);
   const noteCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
     if (!settings.showNotes) return counts;
@@ -1646,6 +1656,15 @@ export function ScriptReader({
                         ) : null
                       }
                       noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
+                      groupLine={
+                        block.roleIds.some((id) => groupRoleIds.has(id)) ? (
+                          <GroupMembersLine
+                            block={block}
+                            names={roleNames}
+                            onOpen={() => setGroupBlockId(block.id)}
+                          />
+                        ) : undefined
+                      }
                     />
                   </React.Fragment>
                 );
@@ -1905,6 +1924,15 @@ export function ScriptReader({
           </p>
         </BottomSheet>
       )}
+
+      <GroupPassageSheet
+        key={groupBlockId ?? "keine"}
+        block={groupBlockId ? (blockById.get(groupBlockId) ?? null) : null}
+        versionId={version.id}
+        names={roleNames}
+        canManage={canManage}
+        onClose={() => setGroupBlockId(null)}
+      />
 
       <BottomSheet
         open={panel === "live"}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { GroupMemberPicker, type PickerValue } from "@/components/skript/group-member-picker";
 import { ArrowLeftIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +17,15 @@ import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
-import type { AdminRole, ScriptRoleAdminData } from "@/lib/skript/role-admin";
+import type { AdminRole, AdminRoleSet, ScriptRoleAdminData } from "@/lib/skript/role-admin";
 import type { GroupMode, RoleKind } from "@/lib/skript/role-links";
 
 import {
+  deleteScriptRoleSetAction,
   mergeScriptRolesAction,
   saveScriptGroupRulesAction,
   saveScriptRoleAction,
+  saveScriptRoleSetAction,
   splitScriptRoleAction,
   undoScriptRoleMergeAction,
 } from "../../actions/skript-rollen";
@@ -71,6 +74,7 @@ function useAction() {
 export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [groupId, setGroupId] = React.useState<string | null>(null);
+  const [setDialog, setSetDialog] = React.useState<AdminRoleSet | "new" | null>(null);
   const [pending, run] = useAction();
   const characters = new Map(data.characters.map((c) => [c.id, c]));
   const roleNames = new Map(data.roles.map((r) => [r.id, r.name]));
@@ -78,8 +82,8 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
   const group = data.roles.find((r) => r.id === groupId) ?? null;
 
   const sections: { kind: RoleKind; title: string }[] = [
-    { kind: "person", title: "Personen" },
     { kind: "group", title: "Gruppen" },
+    { kind: "person", title: "Personen" },
     { kind: "ignore", title: "Ignoriert" },
   ];
 
@@ -87,7 +91,14 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
     const parts: string[] = [];
     if (role.current) parts.push(`${role.lines} Repliken · ${role.scenes} Szenen`);
     else parts.push("in der aktuellen Fassung nicht");
-    if (role.kind === "group") parts.push(GROUP_MODE_LABELS[role.groupMode ?? "present"]);
+    if (role.kind === "group") {
+      parts.push(GROUP_MODE_LABELS[role.groupMode ?? "present"]);
+      const custom =
+        data.rules.filter((r) => r.groupRoleId === role.id && (r.sceneKey || r.lineageId)).length +
+        data.setRules.filter((r) => r.groupRoleId === role.id && (r.sceneKey || r.lineageId))
+          .length;
+      if (custom) parts.push(`${custom} Ausnahmen`);
+    }
     if (role.splitFrom) parts.push(`abgetrennt von ${role.splitFrom.name}`);
     if (role.kind !== "ignore") {
       const names = role.characterIds.map((id) => characters.get(id)?.name).filter(Boolean);
@@ -126,34 +137,43 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
           .sort((a, b) => Number(b.current) - Number(a.current) || b.words - a.words);
         if (!roles.length) return null;
         return (
-          <Card key={kind}>
-            <CardHeader>
-              <CardTitle>
-                {title} <span className="text-muted-foreground">({roles.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ListRowGroup>
-                {roles.map((role) => (
-                  <ListRow
-                    key={role.id}
-                    onClick={() => setOpenId(role.id)}
-                    title={
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate">{role.name}</span>
-                        {role.kind === "person" && !role.characterIds.length ? (
-                          <Badge variant="warning" size="sm">
-                            offen
-                          </Badge>
-                        ) : null}
-                      </span>
-                    }
-                    description={describe(role)}
-                  />
-                ))}
-              </ListRowGroup>
-            </CardContent>
-          </Card>
+          <React.Fragment key={kind}>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {title} <span className="text-muted-foreground">({roles.length})</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ListRowGroup>
+                  {roles.map((role) => (
+                    <ListRow
+                      key={role.id}
+                      onClick={() => setOpenId(role.id)}
+                      title={
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate">{role.name}</span>
+                          {role.kind === "person" && !role.characterIds.length ? (
+                            <Badge variant="warning" size="sm">
+                              offen
+                            </Badge>
+                          ) : null}
+                        </span>
+                      }
+                      description={describe(role)}
+                    />
+                  ))}
+                </ListRowGroup>
+                {kind === "group" ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Tipp: Wer mitspricht, lässt sich auch direkt im Skript ändern – auf die Zeile
+                    unter „{roles[0]?.name}“ tippen.
+                  </p>
+                ) : null}
+              </CardContent>
+            </Card>
+            {kind === "group" ? <RoleSetsCard data={data} onOpen={setSetDialog} /> : null}
+          </React.Fragment>
         );
       })}
 
@@ -200,6 +220,14 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
       ) : null}
       {group ? (
         <GroupDialog key={group.id} data={data} group={group} onClose={() => setGroupId(null)} />
+      ) : null}
+      {setDialog ? (
+        <RoleSetDialog
+          key={setDialog === "new" ? "new" : setDialog.id}
+          data={data}
+          set={setDialog === "new" ? null : setDialog}
+          onClose={() => setSetDialog(null)}
+        />
       ) : null}
     </div>
   );
@@ -491,23 +519,37 @@ function GroupDialog({
   const people = data.roles.filter((r) => r.kind === "person");
   const names = new Map(data.roles.map((r) => [r.id, r.name]));
   const rules = data.rules.filter((r) => r.groupRoleId === group.id);
+  const setRules = data.setRules.filter((r) => r.groupRoleId === group.id);
   const blocks = data.groupBlocks.filter((b) => b.roleIds.includes(group.id));
   const scenes = data.scenes.filter((s) => blocks.some((b) => b.sceneKey === s.sceneKey));
   const mode = group.groupMode ?? "present";
 
-  const rulesAt = (level: Level) =>
-    rules.filter((r) => r.sceneKey === level.sceneKey && r.lineageId === level.lineageId);
-  const save = (level: Level, include: string[], exclude: string[]) =>
+  const at = (level: Level) => (r: { sceneKey: string | null; lineageId: string | null }) =>
+    r.sceneKey === level.sceneKey && r.lineageId === level.lineageId;
+  const rulesAt = (level: Level) => [...rules.filter(at(level)), ...setRules.filter(at(level))];
+  const valueAt = (level: Level, mode: "include" | "exclude"): PickerValue => ({
+    roleIds: rules
+      .filter(at(level))
+      .filter((r) => r.mode === mode)
+      .map((r) => r.memberRoleId),
+    setIds: setRules
+      .filter(at(level))
+      .filter((r) => r.mode === mode)
+      .map((r) => r.setId),
+  });
+  const save = (level: Level, include: PickerValue, exclude: PickerValue) =>
     run(() =>
       saveScriptGroupRulesAction(data.showId, {
         groupRoleId: group.id,
         ...level,
-        include,
-        exclude,
+        include: include.roleIds,
+        exclude: exclude.roleIds,
+        includeSets: include.setIds,
+        excludeSets: exclude.setIds,
       }),
     );
-
-  const base = rulesAt({ sceneKey: null, lineageId: null });
+  const none: PickerValue = { roleIds: [], setIds: [] };
+  const baseLevel = { sceneKey: null, lineageId: null };
   const membersText = (ids: string[]) =>
     ids.length ? ids.map((id) => names.get(id) ?? "?").join(", ") : "niemand";
 
@@ -528,16 +570,13 @@ function GroupDialog({
           <h3 className="text-sm font-medium">
             {mode === "fixed" ? "Wer gehört dazu?" : "Grundsätzlich nicht dabei"}
           </h3>
-          <MemberPicker
+          <GroupMemberPicker
             people={people}
-            initial={base
-              .filter((r) => r.mode === (mode === "fixed" ? "include" : "exclude"))
-              .map((r) => r.memberRoleId)}
+            sets={data.sets}
+            initial={valueAt(baseLevel, mode === "fixed" ? "include" : "exclude")}
             pending={pending}
-            onSave={(ids) =>
-              mode === "fixed"
-                ? save({ sceneKey: null, lineageId: null }, ids, [])
-                : save({ sceneKey: null, lineageId: null }, [], ids)
+            onSave={(value) =>
+              mode === "fixed" ? save(baseLevel, value, none) : save(baseLevel, none, value)
             }
           />
         </section>
@@ -570,9 +609,10 @@ function GroupDialog({
                         <LevelEditor
                           label="Ganze Szene"
                           people={people}
-                          rules={sceneRules}
+                          sets={data.sets}
+                          value={valueAt(sceneLevel, "include")}
                           pending={pending}
-                          onSave={(include) => save(sceneLevel, include, [])}
+                          onSave={(include) => save(sceneLevel, include, none)}
                         />
                         {sceneBlocks.map((block) => {
                           const level = { sceneKey: null, lineageId: block.lineageId };
@@ -590,9 +630,10 @@ function GroupDialog({
                               <LevelEditor
                                 label="Nur dieser Absatz"
                                 people={people}
-                                rules={rulesAt(level)}
+                                sets={data.sets}
+                                value={valueAt(level, "include")}
                                 pending={pending}
-                                onSave={(include) => save(level, include, [])}
+                                onSave={(include) => save(level, include, none)}
                               />
                             </div>
                           );
@@ -618,18 +659,20 @@ function GroupDialog({
 function LevelEditor({
   label,
   people,
-  rules,
+  sets,
+  value,
   pending,
   onSave,
 }: {
   label: string;
   people: AdminRole[];
-  rules: ScriptRoleAdminData["rules"];
+  sets: AdminRoleSet[];
+  value: PickerValue;
   pending: boolean;
-  onSave: (include: string[]) => void;
+  onSave: (include: PickerValue) => void;
 }) {
-  const included = rules.filter((r) => r.mode === "include").map((r) => r.memberRoleId);
-  const [custom, setCustom] = React.useState(included.length > 0);
+  const hasValue = value.roleIds.length + value.setIds.length > 0;
+  const [custom, setCustom] = React.useState(hasValue);
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -637,10 +680,10 @@ function LevelEditor({
         <SegmentedControl
           aria-label={label}
           value={custom ? "custom" : "default"}
-          onValueChange={(value) => {
-            const next = value === "custom";
-            setCustom(next);
-            if (!next && included.length) onSave([]);
+          onValueChange={(next) => {
+            const isCustom = next === "custom";
+            setCustom(isCustom);
+            if (!isCustom && hasValue) onSave({ roleIds: [], setIds: [] });
           }}
           options={[
             { value: "default", label: "Wie darüber" },
@@ -649,56 +692,169 @@ function LevelEditor({
         />
       </div>
       {custom ? (
-        <MemberPicker people={people} initial={included} pending={pending} onSave={onSave} />
+        <GroupMemberPicker
+          people={people}
+          sets={sets}
+          initial={value}
+          pending={pending}
+          onSave={onSave}
+        />
       ) : null}
     </div>
   );
 }
 
-function MemberPicker({
-  people,
-  initial,
-  pending,
-  onSave,
+/** Personengruppen („Jugendliche“, „Händler“) – einmal anlegen, in jeder Gruppe wählen. */
+function RoleSetsCard({
+  data,
+  onOpen,
 }: {
-  people: AdminRole[];
-  initial: string[];
-  pending: boolean;
-  onSave: (ids: string[]) => void;
+  data: ScriptRoleAdminData;
+  onOpen: (set: AdminRoleSet | "new") => void;
 }) {
-  const [ids, setIds] = React.useState(initial);
-  const dirty = ids.length !== initial.length || ids.some((id) => !initial.includes(id));
+  const names = new Map(data.roles.map((r) => [r.id, r.name]));
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {people.map((person) => {
-          const active = ids.includes(person.id);
-          return (
-            <button
-              key={person.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() =>
-                setIds((current) =>
-                  active ? current.filter((id) => id !== person.id) : [...current, person.id],
-                )
-              }
-              className={
-                active
-                  ? "min-h-9 rounded-full border border-primary bg-primary/15 px-3 text-sm text-primary"
-                  : "min-h-9 rounded-full border border-border bg-background px-3 text-sm text-muted-foreground hover:text-foreground"
-              }
-            >
-              {person.name}
-            </button>
-          );
-        })}
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-2">
+        <CardTitle>
+          Personengruppen <span className="text-muted-foreground">({data.sets.length})</span>
+        </CardTitle>
+        <Button size="sm" variant="outline" onClick={() => onOpen("new")}>
+          Neue Personengruppe
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {data.sets.length ? (
+          <ListRowGroup>
+            {data.sets.map((set) => (
+              <ListRow
+                key={set.id}
+                onClick={() => onOpen(set)}
+                title={set.name}
+                description={
+                  set.memberRoleIds.length
+                    ? set.memberRoleIds.map((id) => names.get(id) ?? "?").join(", ")
+                    : "noch leer"
+                }
+              />
+            ))}
+          </ListRowGroup>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Z. B. „Jugendliche“ oder „Händler“: einmal anlegen, dann bei „Alle“ in einer Szene oder
+            einem Absatz als Ganzes auswählen.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RoleSetDialog({
+  data,
+  set,
+  onClose,
+}: {
+  data: ScriptRoleAdminData;
+  set: AdminRoleSet | null;
+  onClose: () => void;
+}) {
+  const [pending, run] = useAction();
+  const [name, setName] = React.useState(set?.name ?? "");
+  const [ids, setIds] = React.useState<string[]>(set?.memberRoleIds ?? []);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const people = data.roles
+    .filter((r) => r.kind === "person")
+    .sort((a, b) => Number(b.current) - Number(a.current) || b.words - a.words);
+  return (
+    <ModalFormDialog
+      open
+      onOpenChange={(next) => (next ? null : onClose())}
+      title={set ? `Personengruppe „${set.name}“` : "Neue Personengruppe"}
+      footer={
+        <>
+          {set ? (
+            <Button variant="ghost" className="mr-auto" onClick={() => setConfirmDelete(true)}>
+              Löschen
+            </Button>
+          ) : null}
+          <Button variant="outline" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <AsyncButton
+            isLoading={pending}
+            disabled={!name.trim()}
+            onClick={() =>
+              run(
+                () =>
+                  saveScriptRoleSetAction(data.showId, {
+                    setId: set?.id ?? null,
+                    name,
+                    memberRoleIds: ids,
+                  }),
+                onClose,
+              )
+            }
+          >
+            Speichern
+          </AsyncButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">Name</span>
+          <input
+            className={inputClass}
+            value={name}
+            placeholder="z. B. Jugendliche"
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium">Wer gehört dazu? ({ids.length})</span>
+          <div className="flex flex-wrap gap-2">
+            {people.map((person) => {
+              const active = ids.includes(person.id);
+              return (
+                <button
+                  key={person.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setIds((current) =>
+                      active ? current.filter((id) => id !== person.id) : [...current, person.id],
+                    )
+                  }
+                  className={
+                    active
+                      ? "min-h-9 rounded-full border border-primary bg-primary/15 px-3 text-sm text-primary"
+                      : "min-h-9 rounded-full border border-border bg-background px-3 text-sm text-muted-foreground hover:text-foreground"
+                  }
+                >
+                  {person.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Änderungen gelten sofort überall, wo die Personengruppe gewählt ist.
+          </p>
+        </div>
       </div>
-      {dirty ? (
-        <AsyncButton size="sm" isLoading={pending} onClick={() => onSave(ids)}>
-          Übernehmen
-        </AsyncButton>
+      {set ? (
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={`„${set.name}“ löschen?`}
+          description="Gruppen, die sie nutzen, fallen an diesen Stellen auf ihre Grundregel zurück."
+          confirmLabel="Löschen"
+          cancelLabel="Abbrechen"
+          variant="destructive"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => run(() => deleteScriptRoleSetAction(data.showId, set.id), onClose)}
+        />
       ) : null}
-    </div>
+    </ModalFormDialog>
   );
 }
